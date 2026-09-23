@@ -13,7 +13,16 @@ Answer the reviewer request with a *working, honest* comparison: **chunked RAG**
 must work on a **long-paragraph-based document**, show **a small example of each
 chunking type**, define a **baseline for judgement**, quantify the **difference
 between methods**, and show the **cost difference between the chunked and
-chunkless approaches**. This report records exactly what the recorded run shows.
+chunkless approaches**.
+
+**Live status of the recorded run:** `evidence/demo_output.txt` was produced with
+the **real LLM backend** — Groq `openai/gpt-oss-120b` (the older
+`llama-3.3-70b-versatile` is no longer served; `llm.py` prints the live model
+list if the name in `.env` is wrong). The fact grid and split counts are pure
+retrieval math (embedding-based, deterministic); the agentic **replies** and the
+agentic **token counts** come from genuine Groq calls. The demo is fully
+runnable without a key — the dry-run backend then reports the same grid with
+deterministic mock replies.
 
 ## 2. The document
 
@@ -63,7 +72,7 @@ table row), **precision@2**, **recall@2**, and **cost** (tokens + LLM calls).
   that alone is not the end of the story.
 - **fixed_token** inherits the same disease for a different unit.
 - **sentence** stops mid-sentence cuts — and still fails Q1/Q4, because the two
-  required facts live in *different paragraphs*: sentence-aware ≠ answer-aware.
+  required facts live in *different paragraphs*: sentence-aware != answer-aware.
 - **paragraph** keeps an idea-unit intact; it wins on precision here (0.88).
 - **structural** is the best of both: full completeness (8/8) at **1 call/question** —
   structure is cheap insurance.
@@ -78,10 +87,12 @@ table row), **precision@2**, **recall@2**, and **cost** (tokens + LLM calls).
 
 The agentic path is modeled honestly:
 
-- navigation: embed query + all 9 units, pick top-2 → 1 LLM call
-- answer: pass the **whole chosen paragraphs** to the LLM → 1 call
-- total: **2 calls/question with whole-paragraph context** (recorded: 573–706 tokens
-  context per question)
+- navigation: embed query + all 9 units, pick top-2 -> 1 LLM call
+- answer: pass the **whole chosen paragraphs** to the LLM -> 1 call
+- total: **2 modeled calls/question with whole-paragraph context** (recorded: 573–706 tokens
+  context per question). On Groq today the navigation step is embedding-based, so the
+  answer call is the one that really hits the LLM — the 2-call count is the honest
+  cost model for an agent that *would* also decide by LLM.
 
 Chunked path: **1 call/question, top-2 chunk context** (fixed-size ≈ small, e.g.
 ~250-token chunks).

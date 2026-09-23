@@ -35,7 +35,7 @@ Create `.env` (copy of `.env.example`):
 
 ```dotenv
 GROQ_API_KEY=your_key_here
-GROQ_MODEL=llama-3.3-70b-versatile
+GROQ_MODEL=openai/gpt-oss-120b
 ```
 
 No key → the demo still runs end-to-end with a deterministic dry-run backend

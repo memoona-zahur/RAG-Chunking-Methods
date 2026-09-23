@@ -15,7 +15,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 GROQ_BASE_URL = "https://api.groq.com/openai/v1"
-GROQ_MODEL = os.getenv("GROQ_MODEL", "llama-3.3-70b-versatile")
+GROQ_MODEL = os.getenv("GROQ_MODEL", "openai/gpt-oss-120b")
 
 
 def backend() -> str:
@@ -27,6 +27,13 @@ def _groq_client():
     from openai import OpenAI
 
     return OpenAI(api_key=os.getenv("GROQ_API_KEY"), base_url=GROQ_BASE_URL)
+
+
+def _available_models() -> list[str]:
+    try:
+        return sorted(m.id for m in _groq_client().models.list().data)
+    except Exception as exc:  # noqa: BLE001
+        return [f"(could not list models: {exc})"]
 
 
 def _required_facts_in(context: str) -> list[str]:
@@ -44,8 +51,16 @@ def _required_facts_in(context: str) -> list[str]:
 def ask(messages: list[dict]) -> dict:
     """Single LLM call. Returns dict(reply, input_tokens, output_tokens, backend, model)."""
     if backend() == "groq":
+        from openai import NotFoundError
+
         client = _groq_client()
-        resp = client.chat.completions.create(model=GROQ_MODEL, messages=messages)
+        try:
+            resp = client.chat.completions.create(model=GROQ_MODEL, messages=messages)
+        except NotFoundError as exc:
+            raise RuntimeError(
+                f"GROQ_MODEL='{GROQ_MODEL}' is not available on your account. "
+                f"Set GROQ_MODEL in .env to one of: {', '.join(_available_models())}"
+            ) from exc
         usage = resp.usage
         return {
             "reply": resp.choices[0].message.content,

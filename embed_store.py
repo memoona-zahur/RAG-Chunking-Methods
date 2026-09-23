@@ -13,7 +13,6 @@ from functools import lru_cache
 
 from qdrant_client import QdrantClient
 from qdrant_client.models import Distance, PointStruct, VectorParams
-from sentence_transformers import SentenceTransformer
 
 EMBED_MODEL = "all-MiniLM-L6-v2"
 DIM = 384
@@ -25,6 +24,24 @@ warnings.filterwarnings("ignore", message="You are sending unauthenticated reque
 # > evidence/demo_output.txt` captures a clean, presentable transcript.
 for _name in ("huggingface_hub", "transformers", "sentence_transformers", "urllib3"):
     logging.getLogger(_name).setLevel(logging.ERROR)
+
+
+def _quiet_tqdm(iterable=None, **kwargs):
+    kwargs["disable"] = True
+    return __import__("tqdm.auto", fromlist=["tqdm"]).tqdm(iterable, **kwargs)
+
+
+# transformers' core_model_loading renders a "Loading weights" bar via
+# transformers.utils.logging.tqdm - patch it to disabled BEFORE sentence_transformers
+# is imported (the demo re-imports this module each run).
+try:
+    from transformers.utils import logging as _logging
+
+    _logging.tqdm = _quiet_tqdm
+except Exception:
+    pass
+
+from sentence_transformers import SentenceTransformer
 
 
 @lru_cache(maxsize=1)

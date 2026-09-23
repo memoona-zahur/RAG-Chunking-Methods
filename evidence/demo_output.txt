@@ -1,3 +1,4 @@
+Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
  RAG CHUNKING METHODS — a head-to-head on one long manual 
  fixed-char · fixed-token · sentence · paragraph · structural · recursive · semantic · chunkless/agentic
 
@@ -42,7 +43,6 @@ The Solar Home series is a complete off-grid power package designed for homes th
       25 chunks   sizes 96,439,347,486,606,389,443,370,552,587,341,435,477,349,392,331,441,267,495,634,626,656,555,416,326 chars   ✂ 4 mid-sentence cut(s)   table intact
       e.g. ...ineup, specifications, and pricing ✂ out sunlight. ⏎  ⏎ ## 2. Kit lineup, s...
 
-Loading weights:   0%|          | 0/103 [00:00<?, ?it/s]Loading weights: 100%|##########| 103/103 [00:00<00:00, 3099.09it/s]
  3.7  semantic
       Breaks where meaning shifts, using embedding similarity - no fixed sizes at all.
       24 chunks   sizes 247,230,287,656,1444,349,320,251,282,375,379,1317,207,436,282,250,223,384,299,296,196,298,356,266 chars   0 mid-sentence cuts   table intact
@@ -52,14 +52,12 @@ The Solar Home series is a complete off-grid power package designed for homes th
       9 chunks   sizes 1089,1307,310,442,1610,1323,1171,1211,1119 chars   0 mid-sentence cuts   table intact
 
  3.9 · EMBED + RETRIEVE + EVALUATE EVERY METHOD (all-MiniLM-L6-v2, in-memory Qdrant)
-Loading weights:   0%|          | 0/103 [00:00<?, ?it/s]Loading weights: 100%|##########| 103/103 [00:00<00:00, 2983.02it/s]
       1/8 fixed_char     facts found (of 8) =  6/8 -> look at the cuts above
       2/8 fixed_token    facts found (of 8) =  7/8 -> keep reading
       3/8 sentence       facts found (of 8) =  5/8 -> look at the cuts above
       4/8 paragraph      facts found (of 8) =  7/8 -> keep reading
       5/8 structural     facts found (of 8) =  8/8 -> keep reading
       6/8 recursive      facts found (of 8) =  4/8 -> look at the cuts above
-Loading weights:   0%|          | 0/103 [00:00<?, ?it/s]Loading weights: 100%|##########| 103/103 [00:00<00:00, 1854.61it/s]
       7/8 semantic       facts found (of 8) =  6/8 -> look at the cuts above
       8/8 agentic        facts found (of 8) =  7/8 -> keep reading
 
@@ -69,23 +67,24 @@ The Solar Home series is a complete off-grid power package designed for homes th
    Q  How long can the Home battery run alone, and what warranty applies to it?
       units considered 9  chosen 2 (read whole)  2 LLM calls modeled
       context ~573 tokens (full paragraphs, nothing trimmed)
-      reply  - **Runtime:** The manual says the “runtime and protection figures above are the numbers you should quote when a customer asks how long the battery will genuinely last on a real evening” — so the Home…
+      reply  The system’s documentation tells you to quote the “runtime and protection figures” that appear in the specification when a customer asks how long the battery will actually last on a typical evening – …
 
    Q  What does the Solar Home Plus kit cost and what is its warranty?
       units considered 9  chosen 2 (read whole)  2 LLM calls modeled
       context ~405 tokens (full paragraphs, nothing trimmed)
-      reply  The Solar Home Plus (model SHM‑800) is priced at **$3,499** and carries a **24‑month warranty**【Solar Home Plus | SHM‑800 | … | $3,499 | 24 months】.
+      reply  The Solar Home Plus kit is priced at **$3,499** and includes a **24‑month warranty**【Table: “Solar Home Plus … $3,499 … 24 months”】.
 
    Q  Which kit carries model number SHM-400?
       units considered 9  chosen 2 (read whole)  2 LLM calls modeled
       context ~405 tokens (full paragraphs, nothing trimmed)
-      reply  The kit that carries model number **SHM‑400** is the **Solar Home Mini**【2. Kit lineup, specifications, and pricing】.
+      reply  The **Solar Home Mini** kit carries the model number **SHM‑400**【2. Kit lineup, specifications, and pricing】.
 
    Q  What should a coastal-area user prepare at install, and which maintenance habit matters most?
       units considered 9  chosen 2 (read whole)  2 LLM calls modeled
       context ~706 tokens (full paragraphs, nothing trimmed)
-      reply  - **What a coastal‑area user must have ready at install**  
-  *“If the house is located within about five kilometers of the coast, the installer must additionally apply the corrosion protection kit, w…
+      reply  **What to prepare at install**
+
+- If the house is within about 5 km of the sea, the installer must **apply the corrosion‑protection kit** – a marine‑grade coating on every exposed metal fitting and a …
 
  5 · FACT-COVERAGE GRID (the baseline for judgement)
       every question carries 2 hand-defined required facts; a method gets ✅ only if
@@ -108,7 +107,7 @@ The Solar Home series is a complete off-grid power package designed for homes th
    method       | LLM calls | context tokens | est. USD (4 questions)
    ----------------------------------------------------------
    chunked      |         8 |           3291 |          0.00213
-   agentic      |         8 |           3837 |          0.00260
+   agentic      |         8 |           3530 |          0.00236
 
       agentic reads ~0.9x the context tokens of chunked for the same 4 questions
       and burns 2 calls instead of 1. On a small manual the gap is modest,

@@ -45,12 +45,16 @@ def dim(s):    return _c("2", s)
 OK, NO, PART = green("PASS"), red("FAIL"), yellow("PARTIAL")
 
 
-def fact_mark(cov: int, total: int) -> str:
+def fact_status(cov: int, total: int) -> str:
     if cov >= total:
-        return OK
+        return "PASS"
     if cov == 0:
-        return NO
-    return PART
+        return "FAIL"
+    return "PARTIAL"
+
+
+def fact_mark(cov: int, total: int) -> str:
+    return {"PASS": OK, "FAIL": NO, "PARTIAL": PART}[fact_status(cov, total)]
 
 
 # ---- helpers ---------------------------------------------------------------
@@ -153,7 +157,7 @@ def eval_grid(rows_per_method: dict):
 
     for name in order:
         rows = rows_per_method[name]
-        marks = "".join(marks_for[fact_mark(r["facts"][0], r["facts"][1])] for r in rows)
+        marks = "".join(marks_for[fact_status(r["facts"][0], r["facts"][1])] for r in rows)
         total_cov = sum(r["facts"][0] for r in rows)
         p = sum(r["precision"] for r in rows) / len(rows)
         r_ = sum(r["recall"] for r in rows) / len(rows)

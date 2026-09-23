@@ -1,0 +1,19 @@
+﻿# --- secrets: never commit ---
+.env
+
+# --- python ---
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+*.egg-info/
+
+# --- test / tool caches ---
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# --- local evidence ignored? no: evidence IS committed (keeper of truth) ---
+# --- OS ---
+.DS_Store
+Thumbs.db

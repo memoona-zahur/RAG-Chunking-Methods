@@ -1,0 +1,144 @@
+"""Tests for the chunking comparison -- pure logic only, no model, no network.
+
+Only the sentence/paragraph/structure/char/token/recursive chunkers and the
+evaluation/cost math are covered. Semantic + embedding internals are validated
+by the demo run itself (evidence/), not by unit tests.
+"""
+
+import pytest
+
+import chunkers
+import costs
+import evaluate
+from chunkers import (
+    Chunk,
+    chunk_fixed_char,
+    chunk_fixed_token,
+    chunk_paragraph,
+    chunk_recursive,
+    chunk_sentence,
+    chunk_structural,
+    count_mid_sentence_cuts,
+    count_table_cuts,
+    split_paragraphs,
+    split_sentences,
+)
+
+TEXT = (
+    "# Manual\n"
+    "\n"
+    "The Solar Home Mini runs on the SHM-400 model and costs $1,999. "
+    "Its battery lasts about eight hours at one thousand watts. "
+    "The Plus kit (model SHM-800) costs $3,499 and carries a 24 month warranty.\n"
+    "\n"
+    "Coastal homes need the corrosion protection kit. Clean the heat sinks monthly.\n"
+    "\n"
+    "| Model | Number | Price | Warranty |\n"
+    "|---|---|---|---|\n"
+    "| Solar Home Mini | SHM-400 | $1,999 | 12 months |\n"
+    "| Solar Home Plus | SHM-800 | $3,499 | 24 months |\n"
+)
+
+
+def test_sentences_split_on_punctuation():
+    s = split_sentences("A sentence. Another one!")
+    assert len(s) == 2
+    assert s[0] == "A sentence."
+
+
+def test_paragraphs_split_blank_lines():
+    p = split_paragraphs("One.\n\nTwo.\n\nThree.")
+    assert p == ["One.", "Two.", "Three."]
+
+
+def test_structural_keeps_heading_sections():
+    out = chunk_structural("# Top\n\ntext\n\n## Next\n\ntext2")
+    assert len(out) == 2
+    assert out[0].kind == "section"
+
+
+def test_fixed_char_never_returns_empty():
+    out = chunk_fixed_char("hello world " * 200, size=500)
+    assert out
+    assert all(c.text for c in out)
+
+
+def test_fixed_token_round_trips_text():
+    out = chunk_fixed_token("one two three four", size=2, overlap=0)
+    assert " ".join(c.text for c in out) == "one two three four"
+    out2 = chunk_fixed_token("a b c d e f g h", size=3, overlap=1)
+    assert all(c.text for c in out2)
+
+
+def test_recursive_is_exhaustive():
+    out = chunk_recursive(TEXT, size=120)
+    joined = " ".join(c.text for c in out)
+    for word in ("SHM-400", "$3,499", "corrosion", "heat sinks"):
+        assert word in joined
+
+
+def test_sentence_chunks_never_cut_a_sentence():
+    out = chunk_sentence("One. Two. Three. Four. ", size=5)
+    body = " ".join(c.text for c in out)
+    assert "One." in body and "Four." in body
+
+
+def test_mid_sentence_cut_detection():
+    chunks = [Chunk("the quick brown fox", "char", 0), Chunk("jumps over.", "char", 1)]
+    assert count_mid_sentence_cuts(chunks) == 1
+    chunks2 = [Chunk("Done. ", "char", 0), Chunk("Next.", "char", 1)]
+    assert count_mid_sentence_cuts(chunks2) == 0
+
+
+def test_table_cut_detection():
+    broken_first = Chunk("| Model | Number | Price | War", "char", 0)
+    broken_rest = Chunk("ranty | 12 months |", "char", 1)
+    assert count_table_cuts([broken_first, broken_rest]) == 1
+    intact = [Chunk("| A | B |\n| 1 | 2 |\n", "char", 0), Chunk("plain para", "char", 1)]
+    assert count_table_cuts(intact) == 0
+
+
+def test_fact_coverage_checks_substrings():
+    ctx = ["the battery lasts eight hours at one thousand watts"]
+    cov, total = evaluate.fact_coverage(ctx, ["eight hours", "nine hours"])
+    assert (cov, total) == (1, 2)
+
+
+def test_precision_recall_basic():
+    chunks = [
+        Chunk("contains eight hours", "p", 0),
+        Chunk("contains ten years and eight hours", "p", 1),
+        Chunk("nothing", "p", 2),
+    ]
+    rel = evaluate.relevant_chunk_ids(chunks, ["eight hours", "ten years"])
+    assert rel == {0, 1}
+    p, r = evaluate.precision_recall(
+        [{"idx": 0}, {"idx": 2}], rel, k=2
+    )
+    assert p == 0.5
+    assert r == 0.5
+
+
+def test_cost_accounting_is_deterministic():
+    rows = [
+        {"input_tokens": 400, "output_tokens": 100, "calls": 1},
+        {"input_tokens": 200, "output_tokens": 0, "calls": 1},
+    ]
+    acc = costs.account(rows)
+    assert acc["input_tokens"] == 600
+    assert acc["calls"] == 2
+    assert acc["usd"] > 0
+    assert acc["usd"] == costs.cost_usd(600, 100)
+
+
+def test_all_methods_return_nonempty_on_doc(tmp_path):
+    doc = tmp_path / "d.md"
+    doc.write_text(TEXT, encoding="utf-8")
+    # `semantic` loads the embedding model - it is validated by the demo run, not here.
+    for name in chunkers.METHODS:
+        if name == "semantic":
+            continue
+        fn = chunkers.METHODS[name]
+        out = fn(chunkers.load_document(str(doc)))
+        assert out, f"{name} produced no chunks"
+        assert all(c.kind for c in out)

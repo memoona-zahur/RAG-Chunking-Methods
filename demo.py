@@ -209,7 +209,7 @@ def honest_limits():
     print(bold(" 7 · HONEST LIMITS OF THIS DEMO"))
     print("  - one document, four questions, one embedding model: a micro-benchmark, not a law.")
     print("  - a real production decision needs your own documents + question set + reranking.")
-    print("  - $ figures use example llama-3.3-70b pricing; check the Groq console before quoting.")
+    print("  - $ figures use example pricing; check the Groq console (openai/gpt-oss-120b) before quoting.")
     print("  - no hyDE, no BM25 hybrid, no meta-refinement — deliberately out of scope today.")
     print()
 

@@ -76,5 +76,5 @@ mid-sentence cuts and table-row cuts produced by the method itself.
 
 - One manual, four questions, one embedding model: a micro-benchmark, not a law.
 - A production decision needs your own document, question set, and retrieval tuning (reranking, hybrid BM25).
-- `$` figures use example llama-3.3-70b pricing — verify current rates in the Groq console.
+- `$` figures use example pricing — verify current rates for `openai/gpt-oss-120b` in the Groq console.
 - Deliberately out of scope: hyDE, hybrid BM25, meta-refinement, agent frameworks.

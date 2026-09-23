@@ -4,8 +4,9 @@ The claim we demonstrate: chunked RAG is roughly 1 LLM call with a small
 top-k context; the chunkless/agentic path needs several calls and reads whole
 sections - so on token volume and dollar cost it multiplies.
 
-Pricing is *example* pricing for llama-3.3-70b-versatile on Groq - check the
-current rates in the Groq console before quoting exact dollars to anyone.
+Pricing is *example* pricing per M token (INPUT_PER_MT / OUTPUT_PER_MT below);
+verify the current Groq console rates for openai/gpt-oss-120b before quoting
+exact dollars to anyone.
 """
 
 from __future__ import annotations

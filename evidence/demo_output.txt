@@ -66,22 +66,24 @@ The Solar Home series is a complete off-grid power package designed for homes th
    Q  How long can the Home battery run alone, and what warranty applies to it?
       units considered 9  chosen 2 (read whole)  2 LLM calls modeled
       context ~573 tokens (full paragraphs, nothing trimmed)
-      reply  The Home battery is sized to keep the house powered through a full evening – you should quote the “runtime and protection figures” given in the data sheets when a customer asks how long it will last o…
+      reply  The Home battery is sized to keep the house powered through a typical evening – the “runtime and protection figures” you give a customer are the numbers to quote for “how long the battery will genuine…
 
    Q  What does the Solar Home Plus kit cost and what is its warranty?
       units considered 9  chosen 2 (read whole)  2 LLM calls modeled
       context ~405 tokens (full paragraphs, nothing trimmed)
-      reply  The Solar Home Plus kit is priced at **$3,499** and comes with a **24‑month warranty**【Solar Home Plus | SHM-800 | 800 W | 10 kWh | $3,499 | 24 months】.
+      reply  The Solar Home Plus kit is priced at **$3,499** and includes a **24‑month warranty**【Solar Home Plus | SHM‑800 | 800 W | 10 kWh | $3,499 | 24 months】.
 
    Q  Which kit carries model number SHM-400?
       units considered 9  chosen 2 (read whole)  2 LLM calls modeled
       context ~405 tokens (full paragraphs, nothing trimmed)
-      reply  The **Solar Home Mini** kit carries the model number **SHM‑400**【2. Kit lineup, specifications, and pricing】.
+      reply  The kit that carries model number **SHM‑400** is the **Solar Home Mini**. 【The entry model is the Solar Home Mini, which carries the model number SHM‑400…】
 
    Q  What should a coastal-area user prepare at install, and which maintenance habit matters most?
       units considered 9  chosen 2 (read whole)  2 LLM calls modeled
       context ~706 tokens (full paragraphs, nothing trimmed)
-      reply  - **What to prepare at install for a coastal‑area home** – The installer must apply the **corrosion‑protection kit**: “a marine‑grade coating for all exposed metal fittings and a sealed junction box f…
+      reply  **What a coastal‑area user must have ready at installation**
+
+- The installer must apply the **corrosion‑protection kit** – a marine‑grade coating for every exposed metal fitting and a sealed junction…
 
  5 · FACT-COVERAGE GRID (the baseline for judgement)
       every question carries 2 hand-defined required facts; a method gets ✅ only if
@@ -104,7 +106,7 @@ The Solar Home series is a complete off-grid power package designed for homes th
    method       | LLM calls | context tokens | est. USD (4 questions)
    ----------------------------------------------------------
    chunked      |         8 |           3291 |          0.00213
-   agentic      |         8 |           3518 |          0.00235
+   agentic      |         8 |           3729 |          0.00252
 
       agentic reads ~0.9x the context tokens of chunked for the same 4 questions
       and burns 2 calls instead of 1. On a small manual the gap is modest,
@@ -116,7 +118,7 @@ The Solar Home series is a complete off-grid power package designed for homes th
  7 · HONEST LIMITS OF THIS DEMO
   - one document, four questions, one embedding model: a micro-benchmark, not a law.
   - a real production decision needs your own documents + question set + reranking.
-  - $ figures use example llama-3.3-70b pricing; check the Groq console before quoting.
+  - $ figures use example pricing; check the Groq console (openai/gpt-oss-120b) before quoting.
   - no hyDE, no BM25 hybrid, no meta-refinement — deliberately out of scope today.
 
  DONE — every number above was computed in this run.

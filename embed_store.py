@@ -6,30 +6,29 @@ store is rebuilt per call - nothing persists, exactly like the kata style.
 
 from __future__ import annotations
 
+import logging
 import os
 import warnings
 from functools import lru_cache
 
 from qdrant_client import QdrantClient
 from qdrant_client.models import Distance, PointStruct, VectorParams
+from sentence_transformers import SentenceTransformer
 
 EMBED_MODEL = "all-MiniLM-L6-v2"
 DIM = 384
 
 os.environ.setdefault("HF_HUB_DISABLE_PROGRESS_BARS", "1")
 os.environ.setdefault("TOKENIZERS_PARALLELISM", "false")
+warnings.filterwarnings("ignore", message="You are sending unauthenticated requests")
+# Silence library chatter (unauth-hub warnings, transformer logs) so `python demo.py
+# > evidence/demo_output.txt` captures a clean, presentable transcript.
+for _name in ("huggingface_hub", "transformers", "sentence_transformers", "urllib3"):
+    logging.getLogger(_name).setLevel(logging.ERROR)
 
 
 @lru_cache(maxsize=1)
 def embedder():
-    import logging
-
-    from sentence_transformers import SentenceTransformer
-
-    warnings.filterwarnings("ignore", message="You are sending unauthenticated requests")
-    logging.getLogger("sentence_transformers").setLevel(logging.ERROR)
-    logging.getLogger("transformers").setLevel(logging.ERROR)
-    logging.getLogger("huggingface_hub").setLevel(logging.ERROR)
     return SentenceTransformer(EMBED_MODEL)
 
 

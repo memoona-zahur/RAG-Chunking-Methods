@@ -26,8 +26,14 @@ pip install -r requirements.txt
 python demo.py
 ```
 
-Your terminal prints the colored walkthrough; the terminal session is the demo.
-The `evidence/demo_output.txt` file in this repo is the recorded run.
+In no time at all, the terminal prints the whole lesson. To *understand* the
+strategies — read them one by one, with the live numbers — open
+[`REPORT.md`](REPORT.md): it is this repo's **slide deck**, written to be read
+end-to-end. The recorded transcript is `evidence/demo_output.txt` (UTF-8).
+
+> Windows tip: for glyphs like ✂ and ✅ in the console, run in a UTF-8 terminal
+> (VS Code / Windows Terminal). GitHub renders the committed transcript cleanly
+> because it is valid UTF-8.
 
 ### Get live LLM answers (optional)
 
@@ -47,6 +53,7 @@ mechanics — and every number — are identical either way.
 ```
 demo.py             the one-command walkthrough (THE artifact)
 demo_document.md    the long Solar Home manual (1628 words, 9 paragraphs, 1 table)
+REPORT.md           the slide deck: every strategy explained + judged, read it end-to-end
 chunkers.py         8 chunking strategies (incl. the chunkless far end)
 embed_store.py      all-MiniLM-L6-v2 + in-memory Qdrant
 evaluate.py         the baseline: required facts, precision@k, recall@k

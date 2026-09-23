@@ -20,10 +20,6 @@ DIM = 384
 os.environ.setdefault("HF_HUB_DISABLE_PROGRESS_BARS", "1")
 os.environ.setdefault("TOKENIZERS_PARALLELISM", "false")
 warnings.filterwarnings("ignore", message="You are sending unauthenticated requests")
-# Silence library chatter (unauth-hub warnings, transformer logs) so `python demo.py
-# > evidence/demo_output.txt` captures a clean, presentable transcript.
-for _name in ("huggingface_hub", "transformers", "sentence_transformers", "urllib3"):
-    logging.getLogger(_name).setLevel(logging.ERROR)
 
 
 def _quiet_tqdm(iterable=None, **kwargs):
@@ -42,6 +38,22 @@ except Exception:
     pass
 
 from sentence_transformers import SentenceTransformer
+
+# Silence library chatter so `python demo.py` shows a clean, presentable console.
+# The "unauthenticated requests" notice is NOT a literal string in any package: the
+# HF server returns an `X-HF-Warning` header and huggingface_hub.utils._http forwards
+# it via logging. Levels must be set AFTER that module is imported (its own import
+# re-applies levels, which is why the earlier pre-import setLevel never held).
+for _name in (
+    "huggingface_hub",
+    "huggingface_hub.utils._http",
+    "transformers",
+    "sentence_transformers",
+    "urllib3",
+    "httpx",
+    "httpcore",
+):
+    logging.getLogger(_name).setLevel(logging.ERROR)
 
 
 @lru_cache(maxsize=1)

@@ -459,6 +459,9 @@ Parameters worth tuning in `chunkers.py`: `size` (500 chars / 120 tokens here), 
 - Per instruction, the demo is intentionally limited to the **chunking problem**.
   Deliberately out of scope: reranking, hybrid BM25+semantic, hyDE, query expansion,
   meta-refinement, agent tooling, multi-hop reasoning.
+- **Long-context degradation ("lost in the middle") is NOT measured here** — the agentic
+  side reads whole paragraphs, but proving recall drops toward the middle of a long
+  context needs a separate, position-controlled benchmark. Out of scope with the demo.
 - `$` figures use example `/1M`-token pricing; always verify the live Groq console rates
   before quoting dollars.
 - Reproducibility: `pytest` = 15 pure-logic tests, `verify_project.py` = 6/6 hygiene

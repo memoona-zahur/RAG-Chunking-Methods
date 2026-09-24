@@ -260,6 +260,74 @@ from our run → verdict.**
 
 ---
 
+## WORKED EXAMPLES — 2 INPUTS, 8 FATES
+
+The strategy detail above explains **what** each method does; this section shows the
+**same two inputs being cut by all eight methods** — boundary-blind ones slice inside a
+sentence, boundary-respecting ones do not. Every split below is produced by
+`chunkers.py`, nothing hand-staged.
+
+**EXAMPLE 1 — two headings, one long paragraph, a closing** (619 chars):
+
+> ## Safety
+>
+> Always disconnect the power before touching the inverter terminals, and wait at least
+> five minutes after switching the system off so the capacitors can drain.
+>
+> ## Warranty
+>
+> The battery carries a ten-year warranty against manufacturing defects, and every panel
+> a twenty-five-year warranty, provided the unit is installed by a certified technician
+> and the online registration form is completed within thirty days of the first startup;
+> replacement units are shipped within ten working days, and service visits are free
+> during the first two years.
+>
+> ## Recycling
+>
+> Return the packaging to any participating dealer.
+
+| Method | Chunks | What actually happened |
+|---|---|---|
+| fixed_char | 2 | split the long Warranty paragraph mid-word (`…eted within thir…`) — blind to sentences |
+| fixed_token | 1 | whole input ≈ 110 words < 120 tokens → kept whole this time |
+| sentence | 1 | 4 sentences easily fit the budget → no boundary, all intact |
+| paragraph | 3 | three blank-line blocks, headings included, Warranty kept whole |
+| structural | 3 | three sections, each `## …` block kept whole (its home turf) |
+| recursive | 2 | Warranty paragraph > size → fallback split, otherwise whole |
+| semantic | 1 | sentences topically coherent → no drop, stays whole |
+| agentic | 3 | whole-paragraph units, read in full — nothing severed |
+
+**EXAMPLE 2 — one long run-on sentence, no heading at all** (744 chars):
+
+> The Home battery stores cheap daytime solar energy during the day and releases it at
+> night, and it can power a full house for roughly eight hours at a steady
+> one-thousand-watt draw, or about sixteen hours when the load stays near five hundred
+> watts, because a fully charged ten-kilowatt-hour pack makes about eight usable
+> kilowatt-hours available before depth-of-discharge protection steps in, and when the
+> battery is paired with the Solar Home Mini kit it keeps the refrigerator, the router
+> and the lights running through the evening and during outages, so the philosophy of
+> the whole series is simple — store while the sun shines, spend only what you need
+> while it does not, and let the automatic transfer switch decide where every watt goes.
+
+| Method | Chunks | What actually happened |
+|---|---|---|
+| fixed_char | 2 | sliced the single sentence — chunk 2 opens mid-word: `…hen the battery is paired…` (the boundary split the word "when") |
+| fixed_token | 2 | same story, the cut just lands a few words later: chunk 2 opens `while the sun shines…` |
+| sentence | 1 | one sentence = one unit — nothing severed by construction |
+| paragraph | 1 | one paragraph = one unit — nothing severed |
+| structural | 1 | no headings here, degrades to paragraph level — and still whole |
+| recursive | 2 | paragraph too big → fell back to separators, cut mid-idea, and re-emitted the overlap tail (`…and during outages, so the philosophy…` appears on both sides) |
+| semantic | 1 | one coherent topic → stays one chunk |
+| agentic | 1 | one whole paragraph, read in full |
+
+**What these two tables teach in one glance:** the size-based and fallback methods
+(`fixed_char`, `fixed_token`, `recursive`) cut *inside* an idea; the boundary-aware ones
+(`sentence`, `paragraph`, `structural`, plus `agentic`'s no-chunk far end) cut
+*between* ideas. Example 2 is exactly why `sentence`/`paragraph` show 0 mid-sentence
+cuts while `fixed_char` shows 23 on the real document.
+
+---
+
 ## THE JUDGEMENT GRID (how they really scored)
 
 Reproduced from the live run — a clean markdown table:

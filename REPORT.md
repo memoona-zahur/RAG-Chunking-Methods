@@ -4,7 +4,7 @@
 
 > How to read this deck: each `##` block is one "slide". The first four blocks build the
 > mental model; the middle ones go strategy-by-strategy, then compare; the last two help
-> you choose. Every number under **Live evidence** comes from `python demo.py` (see
+> you choose. Every number under **Live evidence** comes from `python3 demo.py` (see
 > `evidence/demo_output.txt`) — nothing here is invented.
 >
 > Repo: `memoona-zahur/RAG-Chunking-Methods` · Test document: a 1,628-word Solar Home
@@ -394,16 +394,16 @@ Parameters worth tuning in `chunkers.py`: `size` (500 chars / 120 tokens here), 
 - `$` figures use example `/1M`-token pricing; always verify the live Groq console rates
   before quoting dollars.
 - Reproducibility: `pytest` = 15 pure-logic tests, `verify_project.py` = 6/6 hygiene
-  checks, and the transcript is regenerable with `python demo.py`.
+  checks, and the transcript is regenerable with `python3 demo.py`.
 
 ---
 
 ## APPENDIX · REPRO DELIVERY
 
 ```
-python -m pip install -r requirements.txt   # 1
-python demo.py                              # 2  <- the whole deck, printed live
-python -m pytest -q; python verify_project.py  # 3  <- proof
+python3 -m pip install -r requirements.txt   # 1
+python3 demo.py                              # 2  <- the whole deck, printed live
+python3 -m pytest -q; python3 verify_project.py  # 3  <- proof
 ```
 
 Live LLM answers appear automatically when `.env` holds `GROQ_API_KEY` + a valid

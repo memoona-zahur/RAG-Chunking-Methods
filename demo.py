@@ -1,6 +1,6 @@
 """RAG Chunking Methods — the one-command walkthrough.
 
-    python demo.py
+    python3 demo.py
 
 Runs the full comparison on demo_document.md: 8 chunking strategies
 (including the chunkless/agentic far end), 4 questions, fact-based

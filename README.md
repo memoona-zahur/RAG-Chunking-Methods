@@ -22,8 +22,8 @@ Everything is computed live — there are no hand-written results anywhere.
 ## Run it
 
 ```bash
-pip install -r requirements.txt
-python demo.py
+python3 -m pip install -r requirements.txt
+python3 demo.py
 ```
 
 In no time at all, the terminal prints the whole lesson. To *understand* the

@@ -119,6 +119,26 @@ def test_precision_recall_basic():
     assert r == 0.5
 
 
+def test_hit_rate_is_binary_hit_or_miss():
+    rel = {1}
+    assert evaluate.hit_rate([{"idx": 1}, {"idx": 9}], rel, k=2) == 1.0
+    assert evaluate.hit_rate([{"idx": 9}, {"idx": 8}], rel, k=2) == 0.0
+    assert evaluate.hit_rate([], rel, k=0) == 0.0
+
+
+def test_navigation_parsing_is_robust():
+    from agentic import parse_navigation
+
+    assert parse_navigation("read paragraphs 4 and 7.", 9, 2) == [4, 7]
+    assert parse_navigation("4,7", 9, 2) == [4, 7]
+    assert parse_navigation("Paragraph 9 is the only useful one.", 9, 2) == [9]
+    assert parse_navigation("9 and 9 again.", 9, 2) == [9]
+    assert parse_navigation("use 0 and 11.", 9, 2) == []
+    assert parse_navigation("none found.", 9, 2) == []
+    assert parse_navigation("7 4 2", 9, 2) == [7, 4]
+    assert parse_navigation("1 2 3 4", 9, 2) == [1, 2]
+
+
 def test_cost_accounting_is_deterministic():
     rows = [
         {"input_tokens": 400, "output_tokens": 100, "calls": 1},

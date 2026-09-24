@@ -9,7 +9,10 @@
 >
 > Repo: `memoona-zahur/RAG-Chunking-Methods` · Test document: a 1,628-word Solar Home
 > manual (`demo_document.md`) with long paragraphs and a spec/price table.
-> Real LLM backend: Groq `openai/gpt-oss-120b`.
+> Backend: Groq `openai/gpt-oss-120b` — the committed transcript is a REAL live run,
+> every token is measured from the model's usage object, and the agentic side makes
+> two real LLM calls per question (navigation + answer). No key → the deterministic
+> dry-run backend reproduces the same retrieval numbers with mock replies (APPENDIX).
 
 ---
 
@@ -118,7 +121,9 @@ Judging must be **independent of the LLM** (so the comparison is reproducible) a
 
 **② Retrieval quality.** For each method, every chunk is embedded with
 `all-MiniLM-L6-v2`, indexed in Qdrant (in-memory), and the question is retrieved with
-`k=2`. We compute precision@2 and recall@2 against "chunks that contain a required fact".
+`k=2`. We compute precision@2 and recall@2 against "chunks that contain a required fact",
+plus **hit-rate@2** — *"did at least one relevant unit land in our top-2?"* — the metric
+most quoted for agentic navigation, where "found or not" matters more than exact rank.
 
 **③ Boundary quality.** Two weaknesses are counted mechanically:
 
@@ -238,14 +243,20 @@ from our run → verdict.**
 - **Wins:** by construction, zero mid-sentence/table cuts and zero severed facts. An
   elegant answer to the whole chunking debate: "don't."
 - **Breaks:** completeness now depends on *navigation*, not boundaries — and it pays
-  for it: **2 modeled LLM calls** per question (navigate + answer) and the whole section
-  as context. If the agent picks the wrong units it misses facts, exactly like retrieval.
-- **Live evidence:** `9 whole-paragraph units` · 0 cuts by construction.
-  **Found 7/8** · P@2 0.88 · R@2 0.92. Real-LLM replies cite the source verbatim (e.g.
-  Q3: *"The kit that carries model number SHM-400 is the Solar Home Mini."*).
+  for it: **2 REAL LLM calls per question** (a navigation call that picks the units +
+  an answer call), and the whole section as context. The navigation call also has to
+  *scan the full document listing* to choose, which is visible in the token bill. If
+  the agent picks the wrong units it misses facts, exactly like retrieval.
+- **Live evidence:** `9 whole-paragraph units` · 0 cuts by construction, and the agent
+  really navigates: in this transcript the LLM picked the paragraphs (`via llm
+  navigation`) — for Q2 it went straight to the spec table. **Found 7/8** · P@2 0.88 ·
+  R@2 0.92 · **HR@2 1.00.** The replies cite the source verbatim (e.g. Q3: *"The kit
+  that carries model number SHM-400 is the Solar Home Mini."*).
 - **Verdict:** the idea that motivated the demo — and our measured takeaway is nuanced:
-  agentic never severs facts, but structure achieves the *same* completeness at less
-  cost. See [THE ONE-LINE TAKEAWAYS](#the-one-line-takeaways-cheat-sheet).
+  agentic never severs facts, but structure achieves the *same* completeness at a
+  fraction of the cost (the agent bills ~4.2× the chunked baseline per question — see
+  [COST CONVERSATION](#cost-conversation-what-it-actually-costs)). See
+  [THE ONE-LINE TAKEAWAYS](#the-one-line-takeaways-cheat-sheet).
 
 ---
 
@@ -253,16 +264,16 @@ from our run → verdict.**
 
 Reproduced from the live run — a clean markdown table:
 
-| Method | Q1 | Q2 | Q3 | Q4 | Facts (8) | Avg P@2 | Avg R@2 |
-|---|---|---|---|---|---|---:|---:|
-| fixed_char | ⚠ | ✅ | ✅ | ⚠ | 6/8 | 0.50 | 0.52 |
-| fixed_token | ⚠ | ✅ | ✅ | ✅ | 7/8 | 0.50 | 0.54 |
-| sentence | ❌ | ✅ | ✅ | ⚠ | 5/8 | 0.38 | 0.46 |
-| paragraph | ⚠ | ✅ | ✅ | ✅ | 7/8 | 0.88 | 0.92 |
-| structural | ✅ | ✅ | ✅ | ✅ | **8/8** | 0.62 | 0.88 |
-| recursive | ⚠ | ❌ | ✅ | ⚠ | 4/8 | 0.50 | 0.38 |
-| semantic | ⚠ | ✅ | ✅ | ⚠ | 6/8 | 0.50 | 0.67 |
-| agentic | ⚠ | ✅ | ✅ | ✅ | 7/8 | 0.88 | 0.92 |
+| Method | Q1 | Q2 | Q3 | Q4 | Facts (8) | Avg P@2 | Avg R@2 | Avg HR@2 |
+|---|---|---|---|---|---|---:|---:|---:|
+| fixed_char | ⚠ | ✅ | ✅ | ⚠ | 6/8 | 0.50 | 0.52 | 1.00 |
+| fixed_token | ⚠ | ✅ | ✅ | ✅ | 7/8 | 0.50 | 0.54 | 1.00 |
+| sentence | ❌ | ✅ | ✅ | ⚠ | 5/8 | 0.38 | 0.46 | 0.75 |
+| paragraph | ⚠ | ✅ | ✅ | ✅ | 7/8 | 0.88 | 0.92 | 1.00 |
+| structural | ✅ | ✅ | ✅ | ✅ | **8/8** | 0.62 | 0.88 | 1.00 |
+| recursive | ⚠ | ❌ | ✅ | ⚠ | 4/8 | 0.50 | 0.38 | 0.75 |
+| semantic | ⚠ | ✅ | ✅ | ⚠ | 6/8 | 0.50 | 0.67 | 1.00 |
+| agentic | ⚠ | ✅ | ✅ | ✅ | 7/8 | 0.88 | 0.92 | 1.00 |
 
 **How to read it**
 
@@ -270,8 +281,9 @@ Reproduced from the live run — a clean markdown table:
 - **Facts (8)** is total completeness (8 = perfect).
 - **Avg P@2** = of the 2 chunks retrieved, how many were relevant.
 - **Avg R@2** = of all *relevant* chunks that exist, how many were retrieved.
+- **Avg HR@2** = did the top-2 contain *any* relevant unit (1 = yes, 0 = no), averaged.
 
-**Three observations that survive any single run**
+**Four observations that survive any single run**
 
 1. **Structure is the cheapest completeness.** `structural` is 8/8 at one call per
    question. Prefer it on any structured corpus.
@@ -279,31 +291,45 @@ Reproduced from the live run — a clean markdown table:
    facts, two paragraphs) is exactly where char/token/sentence/recursive fall to ⚠ or ❌.
    Boundaries that ignore paragraphs are boundaries that eat answers.
 3. **Agentic is not automatically better.** Its 7/8 equals `paragraph`'s — reading
-   whole paragraphs helps, but *finding* the right paragraphs is still retrieval. (In our
-   run it missed Q1's `eight hours` on navigation alone.)
+   whole paragraphs helps, but *finding* the right paragraphs is still retrieval. (In
+   the retrieval baseline it missed Q1's `eight hours` on navigation alone; Q1 is the
+   one question whose two facts live in two places.)
+4. **Hit-rate can flatter a retriever.** `agentic` scores HR@2 1.00 yet still 7/8 — it
+   always found *a* relevant section, but Q1's two facts lived in separate places and
+   top-2 caught only one. "We found something" ≠ "we found the answer": that is exactly
+   why this demo judges facts, not just hits.
 
 ---
 
 ## THE COST CONVERSATION — CHUNKED vs CHUNKLESS
 
 The framing is "chunked = 1 call with a small context, agentic = many calls with a big
-context." Our live numbers make it concrete (Groq `gpt-oss-120b`; `$` uses example
-pricing shown in `costs.py` — check live rates):
+context." Our live numbers make it concrete (`$` uses the example pricing in `costs.py`
+— verify live Groq rates before quoting dollars). The chunked side is **one** method,
+`fixed_char`, at 1 fair-basis call per question — not two methods counted together, which
+would have disguised the real gap:
 
-| Path | LLM calls (4 Q's) | Context tokens | Est. USD (4 questions) |
-|---|---:|---:|---:|
-| chunked (fixed-size) | 8 | 3,291 | 0.00213 |
-| agentic (chunkless) | 8 | 3,572 | 0.00239 |
+| Path | LLM calls (4 Q's) | Tokens in (4 Q's) | Tokens out (4 Q's) | Est. USD (4 questions) | Est. USD / question |
+|---|---|---:|---:|---:|---:|---:|
+| chunked (`fixed_char`) | 4 | 1,184 | 1,182 | 0.00163 | 0.000408 |
+| agentic / chunkless | 8 | 8,524 | 2,354 | 0.00689 | 0.001722 |
 
 What is honest here — and what isn't:
 
-- The **call gap** is real and structural: **2 calls vs 1** per question.
-- The **token gap is modest on this small manual** (agentic ≈ 0.9× the context tokens)
-  because the whole sections we read are still only ~700 tokens each.
+- **Every number above is a REAL LLM call.** Both sides actually answered on Groq
+  (`openai/gpt-oss-120b`) in this run; input *and* output tokens come from the model's
+  usage object, not a model. The chunked side is one method, `fixed_char`, at 1 fair-basis
+  call per question — not two methods counted together, which would have disguised the gap.
+- The **call gap is real and structural: 2 calls vs 1 per question** (navigate + answer).
+- The **token gap is real and it is big even on this tiny manual — agentic sends ≈ 7.2×
+  the input tokens** (8,524 vs 1,184): it reads whole paragraphs in full, and its
+  navigation call scans the whole numbered document to choose units.
+- **The dollar gap lands at ≈ 4.2× per question** (0.001722 vs 0.000408) — squarely in
+  the "3–5×" range you'd expect from an agentic pipeline, measured, not estimated.
 - The **predictability gap is the one that scales**: chunked context is *roughly
   predictable* (top-k × chunk size, fixed per method), while agentic context *grows with
-  whole-section size*. Point the agent at a 5,000-word regulation and the dollar gap
-  multiplies; the calls stay 2 vs 1, but the context won't stay small.
+  whole-section size*. Point it at a 5,000-word regulation and the 4.2× on this manual
+  becomes 5–10×: the calls stay 2 vs 1, but the context will not stay small.
 
 So the honest one-liner: *"Chunkless never severs a fact, but it bills like a taxi (per
 read) instead of sharing a bus (fixed chunks). Structure gets you the completeness at the
@@ -367,7 +393,7 @@ Parameters worth tuning in `chunkers.py`: `size` (500 chars / 120 tokens here), 
   meta-refinement, agent tooling, multi-hop reasoning.
 - `$` figures use example `/1M`-token pricing; always verify the live Groq console rates
   before quoting dollars.
-- Reproducibility: `pytest` = 13 pure-logic tests, `verify_project.py` = 6/6 hygiene
+- Reproducibility: `pytest` = 15 pure-logic tests, `verify_project.py` = 6/6 hygiene
   checks, and the transcript is regenerable with `python demo.py`.
 
 ---
@@ -381,7 +407,11 @@ python -m pytest -q; python verify_project.py  # 3  <- proof
 ```
 
 Live LLM answers appear automatically when `.env` holds `GROQ_API_KEY` + a valid
-`GROQ_MODEL` (see `.env.example`); otherwise the deterministic dry-run backend reports
-the same grid with mock replies — every number above is identical either way. On
+`GROQ_MODEL` (see `.env.example`); the agent makes **two real calls per question**
+(navigation + answer) and every token in the cost table is measured from the model's
+usage object. The committed transcript IS that live run. Without a key, the
+deterministic dry-run backend reproduces the same chunk counts, cuts, fact grid and
+P/R/HR scores with mock replies — only the token-dollar columns and the agent's
+navigation choice differ (the offline agent falls back to embedding ranking). On
 Windows, prefer a UTF-8 terminal (VS Code / Windows Terminal) so glyphs like ✂ ✅ render;
 the file `evidence/demo_output.txt` is saved as UTF-8 for GitHub.

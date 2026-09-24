@@ -16,8 +16,8 @@ Everything is computed live — there are no hand-written results anywhere.
 | Fixed-size splitting severs sentences and table rows | `fixed_char` cuts 23 sentences + 1 table row in this document |
 | Structure-aware chunking recovers completeness at one small call | `structural` finds 8/8 required facts, all 4 questions complete |
 | Blind recursive overlap is not a magic bullet | `recursive` finds only 4/8 required facts here |
-| Chunkless/agentic never severs a fact — but it reads whole sections at 2 calls/question | agentic section: whole paragraphs read in full, 2 modeled calls each |
-| Chunked context is predictable (top-k × chunk size); agentic context grows with section size | cost drill-down at the end of the run |
+| Chunkless/agentic never severs a fact — but it bills like a taxi (2 real calls/question, ≈4.2× the price) | agentic section + cost drill-down: real navigation call + real answer call, every token from the model's usage object |
+| Chunked context is predictable (top-k × chunk size); agentic context grows with section size | cost drill-down at the end of the run: one chunked method vs the chunkless path, per question |
 
 ## Run it
 
@@ -35,7 +35,7 @@ end-to-end. The recorded transcript is `evidence/demo_output.txt` (UTF-8).
 > (VS Code / Windows Terminal). GitHub renders the committed transcript cleanly
 > because it is valid UTF-8.
 
-### Get live LLM answers (optional)
+### Get live LLM answers (recommended)
 
 Create `.env` (copy of `.env.example`):
 
@@ -44,9 +44,13 @@ GROQ_API_KEY=your_key_here
 GROQ_MODEL=openai/gpt-oss-120b
 ```
 
-No key → the demo still runs end-to-end with a deterministic dry-run backend
-that reports the required facts present in the retrieved context, so the
-mechanics — and every number — are identical either way.
+With a key, the agentic side makes **two real LLM calls per question** (a navigation
+call that picks the paragraphs + the answer call), and the cost table's tokens come
+straight from the model's usage object. Without a key, the demo still runs
+end-to-end with a deterministic dry-run backend that reports the required facts
+present in the retrieved context, so the mechanics — chunk counts, cuts, and every
+P/R/HR score — are the same; only the token-dollar columns and the agent's
+navigation choice differ (the offline agent falls back to embedding ranking).
 
 ## What's inside
 
@@ -56,9 +60,9 @@ demo_document.md    the long Solar Home manual (1628 words, 9 paragraphs, 1 tabl
 REPORT.md           the slide deck: every strategy explained + judged, read it end-to-end
 chunkers.py         8 chunking strategies (incl. the chunkless far end)
 embed_store.py      all-MiniLM-L6-v2 + in-memory Qdrant
-evaluate.py         the baseline: required facts, precision@k, recall@k
-agentic.py          chunkless navigation: pick whole paragraphs, read them in full
-llm.py              hybrid: Groq when key present, dry-run otherwise
+evaluate.py         the baseline: required facts, precision@k, recall@k, hit-rate@k
+agentic.py          chunkless agent: REAL navigation + answer calls, reads whole paragraphs
+llm.py              hybrid: Groq when key present, deterministic dry-run otherwise
 costs.py            token/call/cost accounting
 tests/              pure-logic tests (no model, no network)
 evidence/           recorded run output
@@ -69,8 +73,9 @@ verify_project.py   sanity + hygiene check before you commit/share
 
 Each of the 4 questions carries **2 hand-defined required facts**. A method only
 gets ✅ if **both** facts survive retrieval into its top-2 context — the LLM is
-told nothing. Fine-grained scores: fact coverage, precision@2, recall@2, plus
-mid-sentence cuts and table-row cuts produced by the method itself.
+told nothing. Fine-grained scores: fact coverage, precision@2, recall@2,
+hit-rate@2 (did the top-2 contain *any* relevant unit — the agentic-side metric),
+plus mid-sentence cuts and table-row cuts produced by the method itself.
 
 ## Honest limits — read before you generalize
 

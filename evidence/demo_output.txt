@@ -64,56 +64,63 @@ The Solar Home series is a complete off-grid power package designed for homes th
       whole paragraphs are navigation units · the agent picks the best and reads them IN FULL
 
    Q  How long can the Home battery run alone, and what warranty applies to it?
-      units considered 9  chosen 2 (read whole)  2 LLM calls modeled
-      context ~573 tokens (full paragraphs, nothing trimmed)
-      reply  The Home battery is sized to keep the house powered through a typical evening – the “runtime and protection figures” you give a customer are the numbers to quote for “how long the battery will genuine…
+      units considered 9  chosen 2 (read whole)  2 REAL LLM calls (navigate + answer)  via llm navigation
+      context ~611 tokens (full paragraphs, nothing trimmed)
+      reply  The Home battery’s runtime depends on the load you place on it. For a 10 kWh pack, the manual says that **“at a steady draw of one thousand watts, a fully‑charged ten kilowatt‑hour battery delivers ab…
 
    Q  What does the Solar Home Plus kit cost and what is its warranty?
-      units considered 9  chosen 2 (read whole)  2 LLM calls modeled
-      context ~405 tokens (full paragraphs, nothing trimmed)
-      reply  The Solar Home Plus kit is priced at **$3,499** and includes a **24‑month warranty**【Solar Home Plus | SHM‑800 | 800 W | 10 kWh | $3,499 | 24 months】.
+      units considered 9  chosen 2 (read whole)  2 REAL LLM calls (navigate + answer)  via llm navigation
+      context ~189 tokens (full paragraphs, nothing trimmed)
+      reply  The Solar Home Plus (model SHM‑800) is listed at a **street price of $3,499** and its **warranty is 24 months**.  
+
+- “Solar Home Plus | SHM‑800 | 800 W | 10 kWh | $3,499 | 24 months”【Manual excerpt, …
 
    Q  Which kit carries model number SHM-400?
-      units considered 9  chosen 2 (read whole)  2 LLM calls modeled
+      units considered 9  chosen 2 (read whole)  2 REAL LLM calls (navigate + answer)  via llm navigation
       context ~405 tokens (full paragraphs, nothing trimmed)
-      reply  The kit that carries model number **SHM‑400** is the **Solar Home Mini**. 【The entry model is the Solar Home Mini, which carries the model number SHM‑400…】
+      reply  The **Solar Home Mini** kit carries the model number **SHM‑400**【2. Kit lineup, specifications, and pricing】.
 
    Q  What should a coastal-area user prepare at install, and which maintenance habit matters most?
-      units considered 9  chosen 2 (read whole)  2 LLM calls modeled
+      units considered 9  chosen 2 (read whole)  2 REAL LLM calls (navigate + answer)  via llm navigation
       context ~706 tokens (full paragraphs, nothing trimmed)
-      reply  **What a coastal‑area user must have ready at installation**
-
-- The installer must apply the **corrosion‑protection kit** – a marine‑grade coating for every exposed metal fitting and a sealed junction…
+      reply  **What a coastal‑area user must have ready at install**  
+- If the house is within about 5 km of the sea, the installer has to apply the **corrosion‑protection kit** – a marine‑grade coating on every …
 
  5 · FACT-COVERAGE GRID (the baseline for judgement)
       every question carries 2 hand-defined required facts; a method gets ✅ only if
       BOTH facts survive retrieval into its top-2 context. No telling the LLM anything.
-      method        | Q1 | Q2 | Q3 | Q4 | facts(8) | avg P@2 | avg R@2
-      ----------------------------------------------------------------
-      fixed_char      | ⚠ ✅ ✅ ⚠ |  6/8   |  0.50     | 0.52
-      fixed_token     | ⚠ ✅ ✅ ✅ |  7/8   |  0.50     | 0.54
-      sentence        | ❌ ✅ ✅ ⚠ |  5/8   |  0.38     | 0.46
-      paragraph       | ⚠ ✅ ✅ ✅ |  7/8   |  0.88     | 0.92
-      structural      | ✅ ✅ ✅ ✅ |  8/8   |  0.62     | 0.88
-      recursive       | ⚠ ❌ ✅ ⚠ |  4/8   |  0.50     | 0.38
-      semantic        | ⚠ ✅ ✅ ⚠ |  6/8   |  0.50     | 0.67
-      agentic         | ⚠ ✅ ✅ ✅ |  7/8   |  0.88     | 0.92
+      method        | Q1 | Q2 | Q3 | Q4 | facts(8) | avg P@2 | avg R@2 | avg HR@2
+      ---------------------------------------------------------------------------
+      fixed_char      | ⚠ ✅ ✅ ⚠ |  6/8   |  0.50     | 0.52   | 1.00
+      fixed_token     | ⚠ ✅ ✅ ✅ |  7/8   |  0.50     | 0.54   | 1.00
+      sentence        | ❌ ✅ ✅ ⚠ |  5/8   |  0.38     | 0.46   | 0.75
+      paragraph       | ⚠ ✅ ✅ ✅ |  7/8   |  0.88     | 0.92   | 1.00
+      structural      | ✅ ✅ ✅ ✅ |  8/8   |  0.62     | 0.88   | 1.00
+      recursive       | ⚠ ❌ ✅ ⚠ |  4/8   |  0.50     | 0.38   | 0.75
+      semantic        | ⚠ ✅ ✅ ⚠ |  6/8   |  0.50     | 0.67   | 1.00
+      agentic         | ⚠ ✅ ✅ ✅ |  7/8   |  0.88     | 0.92   | 1.00
 
- 6 · CHUNKED vs CHUNKLESS — THE COST GAP
-      chunked (fixed-size): 1 LLM call/question, only the small top-2 chunk as context.
-      agentic (no chunks)  : 2 calls/question (navigate + answer), whole sections read.
+ 6 · CHUNKED vs CHUNKLESS — THE COST GAP (per question)
+      EVERY figure below is a REAL LLM call: both sides actually answer on Groq.
+      chunked shown for fixed_char : 1 call/question, only the small top-2 chunks as context.
+      agentic (no chunks)          : 2 calls/question (real navigation + answer), whole sections read.
 
-   method       | LLM calls | context tokens | est. USD (4 questions)
-   ----------------------------------------------------------
-   chunked      |         8 |           3291 |          0.00213
-   agentic      |         8 |           3729 |          0.00252
+   method              | calls | tokens in | tokens out | est. USD (4 questions)
+   ----------------------------------------------------------------------
+   chunked (fixed_char) |     4 |     1184 |      1182 |              0.00163
+   agentic (chunkless)  |     8 |     8524 |      2354 |              0.00689
 
-      agentic reads ~0.9x the context tokens of chunked for the same 4 questions
-      and burns 2 calls instead of 1. On a small manual the gap is modest,
-      but chunked context is PREDICTABLE (top-k x chunk size) while agentic
-      context grows with whole-section size - flip it to a 5,000-word section
-      and the gap multiplies. Structure is the cheap way to keep completeness
-      and small fixed reads: structural got 4/4 questions complete in one call each.
+   per 4-question run, per question:
+      chunked: 1 call, ~296 in-tokens → $0.000408
+      agentic: 2 calls, ~2131 in-tokens → $0.001722
+
+      agentic bills ~7.2× the context tokens, 2× the calls,
+      and ~4.2× the price per question — even before whole sections get big.
+      On a small manual the gap is modest, but chunked context is PREDICTABLE
+      (top-k × chunk size) while agentic context grows with whole-section size —
+      flip it to a 5,000-word regulation and the gap multiplies. Structure is the
+      cheap way to keep completeness and small fixed reads: structural got 4/4
+      questions complete in one call each.
 
  7 · HONEST LIMITS OF THIS DEMO
   - one document, four questions, one embedding model: a micro-benchmark, not a law.

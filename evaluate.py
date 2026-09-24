@@ -5,6 +5,7 @@ For every chunking method we embed + index its chunks, retrieve top-k, then scor
 
 - fact coverage : which required facts appear in the retrieved context
 - precision@k / recall@k against chunks that contain any required fact
+- hit-rate@k (the agentic-side metric): did at least one relevant unit land in top-k?
 - mid-sentence cuts & table cuts produced by the method itself
 - tokens sent per question (chars/4 heuristic) and LLM calls
 """
@@ -39,6 +40,13 @@ def precision_recall(retrieved: list[dict], relevant: set[int], k: int) -> tuple
     p = hit / k if k else 0.0
     r = hit / len(relevant) if relevant else 0.0
     return round(p, 2), round(r, 2)
+
+
+def hit_rate(retrieved: list[dict], relevant: set[int], k: int) -> float:
+    """Binary "did we find ANYTHING relevant in the top-k" — the standard
+    metric for agentic navigation, where only 'found or not' matters."""
+    top = [h["idx"] for h in retrieved[:k]]
+    return 1.0 if set(top) & relevant else 0.0
 
 
 # (question, [required facts as lowercase substrings])
@@ -79,6 +87,7 @@ def analyze_method(
         cov, total = fact_coverage(context, facts)
         relevant = relevant_chunk_ids(chunks, facts)
         p, r = precision_recall(hits, relevant, K)
+        hr = hit_rate(hits, relevant, K)
         rows.append(
             {
                 "method": method,
@@ -86,6 +95,7 @@ def analyze_method(
                 "facts": (cov, total),
                 "precision": p,
                 "recall": r,
+                "hit_rate": hr,
                 "tokens": est_tokens(context),
                 "calls": 1,
             }

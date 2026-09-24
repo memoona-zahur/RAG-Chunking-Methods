@@ -178,9 +178,9 @@ def chunk_semantic(text: str, threshold: float = 0.45) -> list[Chunk]:
     Consecutive sentences are merged while their cosine similarity to the running
     centroid stays above ``threshold``; a drop starts a new chunk.
     """
-    from sentence_transformers import SentenceTransformer
+    from embed_store import embedder
 
-    model = SentenceTransformer("all-MiniLM-L6-v2")
+    model = embedder()
     sents = split_sentences(text)
     emb = model.encode(sents, normalize_embeddings=True)
     chunks: list[Chunk] = []

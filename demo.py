@@ -21,6 +21,7 @@ import chunkers
 import costs
 import embed_store as es
 import evaluate
+import llm
 
 DOC = "demo_document.md"
 
@@ -136,10 +137,14 @@ def run_agentic(agent, block: list):
     print()
     for q, _facts in evaluate.QUESTIONS:
         res = agent.answer(DOC_TEXT, q)
+        if llm.backend() == "groq":
+            calls_label = f"{res['chosen_units']['calls']} REAL LLM calls (navigate + answer)"
+        else:
+            calls_label = f"{res['chosen_units']['calls']} LLM calls modeled (dry-run)"
         print(f"   Q  {q}")
         print(f"      units considered {res['chosen_units']['units_considered']}  "
               f"chosen {res['chosen_units']['chosen']} (read whole)  "
-              f"{res['chosen_units']['calls']} LLM calls modeled")
+              f"{calls_label}  via {res['chosen_units']['via']}")
         print(f"      context ~{res['context_tokens']} tokens (full paragraphs, nothing trimmed)")
         print(f"      reply  {dim(res['reply'][:200])}" + ("…" if len(res["reply"]) > 200 else ""))
         print()
@@ -149,7 +154,7 @@ def eval_grid(rows_per_method: dict):
     print(bold(" 5 · FACT-COVERAGE GRID (the baseline for judgement)"))
     print("      every question carries 2 hand-defined required facts; a method gets ✅ only if")
     print("      BOTH facts survive retrieval into its top-2 context. No telling the LLM anything.")
-    header = "      method        | Q1 | Q2 | Q3 | Q4 | facts(8) | avg P@2 | avg R@2"
+    header = "      method        | Q1 | Q2 | Q3 | Q4 | facts(8) | avg P@2 | avg R@2 | avg HR@2"
     print(header)
     print("      " + "-" * (len(header) - 6))
     order = list(chunkers.METHODS)
@@ -161,47 +166,67 @@ def eval_grid(rows_per_method: dict):
         total_cov = sum(r["facts"][0] for r in rows)
         p = sum(r["precision"] for r in rows) / len(rows)
         r_ = sum(r["recall"] for r in rows) / len(rows)
-        print(f"      {name:<16}|{marks} | {total_cov:2d}/8   |  {p:4.2f}     | {r_:4.2f}")
+        hr = sum(r["hit_rate"] for r in rows) / len(rows)
+        print(f"      {name:<16}|{marks} | {total_cov:2d}/8   |  {p:4.2f}     | {r_:4.2f}   | {hr:4.2f}")
     print()
 
 
 def cost_drilldown(rows_per_method: dict, agentic_results: list[dict]):
-    print(bold(" 6 · CHUNKED vs CHUNKLESS — THE COST GAP"))
-    print("      chunked (fixed-size): 1 LLM call/question, only the small top-2 chunk as context.")
-    print("      agentic (no chunks)  : 2 calls/question (navigate + answer), whole sections read.")
+    print(bold(" 6 · CHUNKED vs CHUNKLESS — THE COST GAP (per question)"))
+    print("      EVERY figure below is a REAL LLM call: both sides actually answer on Groq.")
+    print("      chunked shown for fixed_char : 1 call/question, only the small top-2 chunks as context.")
+    print("      agentic (no chunks)          : 2 calls/question (real navigation + answer), whole sections read.")
     print()
+    # Honest comparison: ONE chunked method, per-question rows, every token
+    # measured from the live model's usage object. (Aggregating two methods'
+    # calls would double-count the chunked side and hide the real gap.)
+    store = es.build_store(chunkers.chunk_fixed_char(DOC_TEXT), "fixed_char")
     ch_rows = []
-    for name in ["fixed_char", "fixed_token"]:
-        for r in rows_per_method[name]:
-            ch_rows.append(
+    for q, _facts in evaluate.QUESTIONS:
+        hits = es.search(store, q, k=2)
+        context = "\n\n---\n\n".join(h["text"] for h in hits[:2])
+        res = llm.ask_robust(
+            [
                 {
-                    "input_tokens": r["tokens"],
-                    "output_tokens": 120,  # typical short answer length (dry-run also uses ~this)
-                    "calls": 1,
-                }
-            )
-    if not ch_rows:
-        return
+                    "role": "system",
+                    "content": "Answer ONLY from the provided manual text. Cite the sentences you use.",
+                },
+                {"role": "user", "content": f"Manual excerpts:\n\n{context}\n\nQuestion: {q}"},
+            ]
+        )
+        ch_rows.append({"input_tokens": res["input_tokens"], "output_tokens": res["output_tokens"], "calls": 1})
     chunked = costs.account(ch_rows)
     ag_rows = [
-        {"input_tokens": a["input_tokens"], "output_tokens": a["output_tokens"], "calls": a["chosen_units"]["calls"]}
+        {
+            "input_tokens": a["input_tokens"],
+            "output_tokens": a["output_tokens"],
+            "calls": a["chosen_units"]["calls"],
+        }
         for a in agentic_results
     ]
     agentic = costs.account(ag_rows)
-    print("   method       | LLM calls | context tokens | est. USD (4 questions)")
-    print("   " + "-" * 58)
-    print(f"   {'chunked':<12} | {chunked['calls']:>9} | {chunked['input_tokens'] + chunked['output_tokens']:>14} | {chunked['usd']:>16.5f}")
-    print(f"   {'agentic':<12} | {agentic['calls']:>9} | {agentic['input_tokens'] + agentic['output_tokens']:>14} | {agentic['usd']:>16.5f}")
-    ratio = (agentic["input_tokens"] / max(1, chunked["input_tokens"]))
+    nq = len(agentic_results)
+    print("   method              | calls | tokens in | tokens out | est. USD (4 questions)")
+    print("   " + "-" * 70)
+    print(f"   chunked (fixed_char) | {chunked['calls']:>5} | {chunked['input_tokens']:>8} | {chunked['output_tokens']:>9} | {chunked['usd']:>20.5f}")
+    print(f"   agentic (chunkless)  | {agentic['calls']:>5} | {agentic['input_tokens']:>8} | {agentic['output_tokens']:>9} | {agentic['usd']:>20.5f}")
+    ratio_in = agentic["input_tokens"] / max(1, chunked["input_tokens"])
+    ratio_calls = agentic["calls"] / max(1, chunked["calls"])
+    ratio_usd = agentic["usd"] / max(1e-9, chunked["usd"])
     print()
-    print("      agentic reads ~{:.1f}x the context tokens of chunked for the same 4 questions".format(ratio))
-    print("      and burns 2 calls instead of 1. On a small manual the gap is modest,")
-    print("      but chunked context is PREDICTABLE (top-k x chunk size) while agentic")
-    print("      context grows with whole-section size - flip it to a 5,000-word section")
-    print("      and the gap multiplies. Structure is the cheap way to keep completeness")
-    print("      and small fixed reads: structural got {}/4 questions complete in one call each.".format(
+    print("   per 4-question run, per question:")
+    print(f"      chunked: {chunked['calls'] // nq} call, ~{chunked['input_tokens'] // nq} in-tokens → ${chunked['usd'] / nq:.6f}")
+    print(f"      agentic: {agentic['calls'] // nq} calls, ~{agentic['input_tokens'] // nq} in-tokens → ${agentic['usd'] / nq:.6f}")
+    print()
+    print(f"      agentic bills ~{ratio_in:.1f}× the context tokens, {ratio_calls:.0f}× the calls,")
+    print(f"      and ~{ratio_usd:.1f}× the price per question — even before whole sections get big.")
+    print("      On a small manual the gap is modest, but chunked context is PREDICTABLE")
+    print("      (top-k × chunk size) while agentic context grows with whole-section size —")
+    print("      flip it to a 5,000-word regulation and the gap multiplies. Structure is the")
+    print("      cheap way to keep completeness and small fixed reads: structural got {}/4".format(
         sum(1 for r in rows_per_method["structural"] if r["facts"][0] == r["facts"][1]))
     )
+    print("      questions complete in one call each.")
     print()
 
 
@@ -223,7 +248,7 @@ def main():
     show_document(DOC_TEXT)
     why_chunk(chunkers.split_paragraphs(DOC_TEXT))
 
-    # 3 · per-method walkthrough (semantic needs the model, so build it once)
+    # 3 · per-method walkthrough (semantic shares the one cached embedder)
     rows_per_method = {}
     for idx, name in enumerate(chunkers.METHODS, start=1):
         show_method(idx, name)

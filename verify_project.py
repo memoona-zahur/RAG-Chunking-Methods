@@ -39,12 +39,19 @@ def main() -> int:
             print(f"         import {mod} failed: {exc}")
     results.append(check("all modules import", importable))
 
-    # 2 · .env exists and holds a key (but the file itself is git-ignored)
+    # 2 · .env hygiene: dry-run (no .env) is a supported, first-class mode;
+    #    but IF a .env exists it must hold a valid Groq key (never a half-setup).
     env_path = os.path.join(ROOT, ".env")
-    has_key_in_env = os.path.isfile(env_path) and bool(
-        KEY_PATTERN.search(open(env_path, encoding="utf-8").read())
-    )
-    results.append(check(".env present with a Groq key", has_key_in_env))
+    if not os.path.isfile(env_path):
+        _env = "no .env → keyless dry-run is a supported mode"
+        has_key_in_env = True
+    elif KEY_PATTERN.search(open(env_path, encoding="utf-8").read()):
+        _env = ".env present with a Groq key (git-ignored)"
+        has_key_in_env = True
+    else:
+        _env = ".env exists but holds no valid gsk_ key"
+        has_key_in_env = False
+    results.append(check(".env hygiene (dry-run OR valid key)", has_key_in_env, _env))
 
     # 3 · the key appears NOWHERE in tracked files
     tracked = sh(f'git -C "{ROOT}" ls-files').split()

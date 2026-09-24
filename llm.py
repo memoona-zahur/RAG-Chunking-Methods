@@ -51,26 +51,47 @@ def _required_facts_in(context: str) -> list[str]:
 def ask(messages: list[dict]) -> dict:
     """Single LLM call. Returns dict(reply, input_tokens, output_tokens, backend, model)."""
     if backend() == "groq":
-        from openai import NotFoundError
+        return _ask_groq(messages)
+    return _ask_dryrun(messages)
 
-        client = _groq_client()
-        try:
-            resp = client.chat.completions.create(model=GROQ_MODEL, messages=messages)
-        except NotFoundError as exc:
-            raise RuntimeError(
-                f"GROQ_MODEL='{GROQ_MODEL}' is not available on your account. "
-                f"Set GROQ_MODEL in .env to one of: {', '.join(_available_models())}"
-            ) from exc
-        usage = resp.usage
-        return {
-            "reply": resp.choices[0].message.content,
-            "input_tokens": usage.prompt_tokens if usage else 0,
-            "output_tokens": usage.completion_tokens if usage else 0,
-            "backend": "groq",
-            "model": GROQ_MODEL,
-        }
 
-    # --- deterministic offline fallback ---
+def ask_robust(messages: list[dict]) -> dict:
+    """Real LLM call when possible; a live failure degrades to the deterministic
+    offline path instead of crashing the demo."""
+    if backend() != "groq":
+        return _ask_dryrun(messages)
+    try:
+        return _ask_groq(messages)
+    except Exception as exc:  # noqa: BLE001 -- the demo must never die on a network blip
+        res = _ask_dryrun(messages)
+        res["reply"] = res["reply"].rstrip() + f" (live call failed: {exc})"
+        res["model"] = "no-llm (dry-run fallback)"
+        return res
+
+
+def _ask_groq(messages: list[dict]) -> dict:
+    from openai import NotFoundError
+
+    client = _groq_client()
+    try:
+        resp = client.chat.completions.create(model=GROQ_MODEL, messages=messages)
+    except NotFoundError as exc:
+        raise RuntimeError(
+            f"GROQ_MODEL='{GROQ_MODEL}' is not available on your account. "
+            f"Set GROQ_MODEL in .env to one of: {', '.join(_available_models())}"
+        ) from exc
+    usage = resp.usage
+    return {
+        "reply": resp.choices[0].message.content,
+        "input_tokens": usage.prompt_tokens if usage else 0,
+        "output_tokens": usage.completion_tokens if usage else 0,
+        "backend": "groq",
+        "model": GROQ_MODEL,
+    }
+
+
+def _ask_dryrun(messages: list[dict]) -> dict:
+    """Deterministic offline answer used when no key is set (or a live call failed)."""
     context = "\n".join(m.get("content", "") for m in messages if m.get("role") == "user")
     facts = _required_facts_in(context)
     reply = (

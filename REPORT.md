@@ -401,6 +401,7 @@ Parameters worth tuning in `chunkers.py`: `size` (500 chars / 120 tokens here), 
 ## APPENDIX · REPRO DELIVERY
 
 ```
+python3 -m pip install torch --index-url https://download.pytorch.org/whl/cpu  # 0  <- CPU-only, skips ~6 GB CUDA
 python3 -m pip install -r requirements.txt   # 1
 python3 demo.py                              # 2  <- the whole deck, printed live
 python3 -m pytest -q; python3 verify_project.py  # 3  <- proof

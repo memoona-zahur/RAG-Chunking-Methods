@@ -22,6 +22,9 @@ Everything is computed live — there are no hand-written results anywhere.
 ## Run it
 
 ```bash
+# CPU-only torch FIRST — avoids the ~6 GB CUDA download (this demo never uses a GPU).
+# Skip this line only if you have an NVIDIA GPU and want the CUDA build.
+python3 -m pip install torch --index-url https://download.pytorch.org/whl/cpu
 python3 -m pip install -r requirements.txt
 python3 demo.py
 ```

@@ -40,6 +40,29 @@ Preview of the verdict (full grid in [THE JUDGEMENT GRID](#the-judgement-grid-ho
 
 ---
 
+## CHUNKING STRATEGIES AT A GLANCE
+
+The eight strategies in this demo, in beginner-friendly English. The details,
+method-by-method, come later in the deck.
+
+| Method | How it splits | Main characteristic |
+|---|---|---|
+| **Fixed-character** `fixed_char` | Cuts the text every ~500 characters, snapping to the nearest space. | The raw baseline — cheap and predictable, but boundaries land inside sentences and table rows, so facts get severed. |
+| **Fixed-token** `fixed_token` | Cuts every ~120 tokens and steps forward with an overlap; words stand in for real tokens. | The token-tuned sibling of fixed-character — still blind to sentence and paragraph meaning. |
+| **Sentence-based** `sentence` | Groups sentences up to a size budget; boundaries land only between sentences. | Grammar-safe: it never cuts mid-sentence, but related sentences can still end up in different chunks. |
+| **Paragraph-based** `paragraph` | Makes one chunk per paragraph (a blank-line block; headings and tables stay attached). | Keeps one idea-unit together, but paragraphs can grow large and dilute retrieval. |
+| **Structural / heading-based** `structural` | Splits at each `##` heading, so a whole section (and its table) is one chunk. | Turns headings into free structure markers — sections stay intact and easy for a retriever to find. |
+| **Recursive** `recursive` | Tries the most meaningful separator first (paragraph → line → sentence → space) until every piece fits; overlaps the tails. | The familiar "default" splitter — sensible out of the box, but not a magic bullet. |
+| **Semantic** `semantic` | Embeds each sentence with the local model and merges neighbours while the meaning stays similar (above a threshold). | Follows topic shifts instead of character counts, so boundaries match ideas — at the cost of an embedding pass. |
+| **Agentic / chunkless** `agentic` | Does not split at all: whole paragraphs become *navigation units*, and an LLM picks which ones to read in full. | Nothing is ever severed by a boundary, but navigation bills for it: ~2× the calls and ~2.5× the price of a chunked method. |
+
+> ℹ️ **"Chunkless" here is one flavor, not the whole category.** This demo's agentic
+> path uses an LLM navigator to choose paragraphs — traditional chunking retrieves
+> fixed chunks instead. Other chunkless RAG designs (e.g. no navigation step at all)
+> work differently, so don't generalize from this one implementation.
+
+---
+
 ## WHAT A CHUNK IS — THE 30-SECOND DEFINITION
 
 A **chunk** is the unit of text that a RAG system hands to two pieces of machinery:

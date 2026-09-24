@@ -25,6 +25,22 @@ Everything is computed live — there are no hand-written results anywhere.
 | Chunkless/agentic never severs a fact, and its LLM navigator reads the manual well — but bills like a taxi | the agentic row is scored on the paragraphs it **actually navigated to** (27/28, its only miss is Q1 — two facts in separate paragraphs), yet pays ~2.5× structural's price and 2× its calls |
 | Chunked context is predictable; agentic context is what the navigator picks + a full-document scan | cost drill-down at the end of the run: real tokens straight from the model's usage object |
 
+## The 8 strategies at a glance
+
+Full detail (and the live numbers) lives in [`REPORT.md`](REPORT.md) — this is just
+the one-line mental model for each.
+
+| Strategy | In one sentence |
+|---|---|
+| Fixed-character | Cuts every N characters, snapping to the nearest space — the raw baseline. |
+| Fixed-token | Cuts every N tokens (words stand in for real tokens) with an overlap. |
+| Sentence-based | Splits only between sentences — grammar-safe. |
+| Paragraph-based | One chunk per paragraph, keeping idea-units together. |
+| Structural / heading-based | Splits at `##` headings; keeps each table with its section. |
+| Recursive | Tries the most meaningful separator first (paragraph → sentence → space). |
+| Semantic | Breaks where the meaning shifts, using embedding similarity. |
+| Agentic / chunkless | Doesn't split: an LLM picks whole paragraphs to read in full — one flavor of chunkless RAG. |
+
 ## Run it
 
 ```bash

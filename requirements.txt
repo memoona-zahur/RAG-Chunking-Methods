@@ -4,3 +4,4 @@ qdrant-client==1.18.0
 openai>=1.60,<3            # Groq path (OpenAI-compatible; <3 stays on the stable client API)
 python-dotenv==1.1.1    # reads GROQ_API_KEY from .env
 pytest==9.1.0
+pillow>=10.4          # required by transformers 5.x (Ubuntu's system Pillow 9 lacks Image.Resampling)

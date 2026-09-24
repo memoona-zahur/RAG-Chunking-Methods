@@ -55,18 +55,25 @@ def ask(messages: list[dict]) -> dict:
     return _ask_dryrun(messages)
 
 
-def ask_robust(messages: list[dict]) -> dict:
-    """Real LLM call when possible; a live failure degrades to the deterministic
-    offline path instead of crashing the demo."""
+def ask_robust(messages: list[dict], retries: int = 2) -> dict:
+    """Real LLM call when possible; a live failure retries a couple of times,
+    then degrades to the deterministic offline path instead of crashing the demo."""
     if backend() != "groq":
         return _ask_dryrun(messages)
-    try:
-        return _ask_groq(messages)
-    except Exception as exc:  # noqa: BLE001 -- the demo must never die on a network blip
-        res = _ask_dryrun(messages)
-        res["reply"] = res["reply"].rstrip() + f" (live call failed: {exc})"
-        res["model"] = "no-llm (dry-run fallback)"
-        return res
+    last = None
+    for attempt in range(retries + 1):
+        try:
+            return _ask_groq(messages)
+        except Exception as exc:  # noqa: BLE001 -- the demo must never die on a network blip
+            last = exc
+            if attempt < retries:
+                import time
+
+                time.sleep(1.5 * (attempt + 1))
+    res = _ask_dryrun(messages)
+    res["reply"] = res["reply"].rstrip() + f" (live call failed: {last})"
+    res["model"] = "no-llm (dry-run fallback)"
+    return res
 
 
 def _ask_groq(messages: list[dict]) -> dict:

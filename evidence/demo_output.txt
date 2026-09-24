@@ -1,4 +1,4 @@
- RAG CHUNKING METHODS — a head-to-head on one long manual 
+RAG CHUNKING METHODS — a head-to-head on one long manual
  fixed-char · fixed-token · sentence · paragraph · structural · recursive · semantic · chunkless/agentic
 
 LLM backend: groq (openai/gpt-oss-120b)
@@ -13,7 +13,7 @@ LLM backend: groq (openai/gpt-oss-120b)
    ## 1. Introducing the Solar Home series
 
 The Solar Home series is a complete off-grid power package designed for homes that want predictable…
-   Fixed-size char splitting severs this mid-sentence, as we will now prove.
+   Fixed-size char splitting severs this mid-sentence, as we will now demonstrate.
 
  3.1  fixed_char
       Every N characters, no regard for meaning - the baseline that cuts sentences/tables.
@@ -48,17 +48,16 @@ The Solar Home series is a complete off-grid power package designed for homes th
 
  3.8  agentic
       No chunks - whole paragraphs are navigation units read in full (chunkless RAG).
-      9 chunks   sizes 1089,1307,310,442,1610,1323,1171,1211,1119 chars   0 mid-sentence cuts   table intact
+      9 navigation units (whole paragraphs, nothing severed)   sizes 1089,1307,310,442,1610,1323,1171,1211,1119 chars   0 mid-sentence cuts   table intact
 
- 3.9 · EMBED + RETRIEVE + EVALUATE EVERY METHOD (all-MiniLM-L6-v2, in-memory Qdrant)
-      1/8 fixed_char     facts found (of 8) =  6/8 -> look at the cuts above
-      2/8 fixed_token    facts found (of 8) =  7/8 -> keep reading
-      3/8 sentence       facts found (of 8) =  5/8 -> look at the cuts above
-      4/8 paragraph      facts found (of 8) =  7/8 -> keep reading
-      5/8 structural     facts found (of 8) =  8/8 -> keep reading
-      6/8 recursive      facts found (of 8) =  4/8 -> look at the cuts above
-      7/8 semantic       facts found (of 8) =  6/8 -> look at the cuts above
-      8/8 agentic        facts found (of 8) =  7/8 -> keep reading
+ 3.9 · EMBED + RETRIEVE + EVALUATE THE 7 CHUNKED METHODS (all-MiniLM-L6-v2, in-memory Qdrant)
+      1/8 fixed_char     facts found (of 28) = 23/28 -> keep reading
+      2/8 fixed_token    facts found (of 28) = 24/28 -> keep reading
+      3/8 sentence       facts found (of 28) = 23/28 -> keep reading
+      4/8 paragraph      facts found (of 28) = 26/28 -> keep reading
+      5/8 structural     facts found (of 28) = 28/28 -> keep reading
+      6/8 recursive      facts found (of 28) = 21/28 -> look at the cuts above
+      7/8 semantic       facts found (of 28) = 26/28 -> keep reading
 
  4 · CHUNKLESS / AGENTIC (no chunks at all)
       whole paragraphs are navigation units · the agent picks the best and reads them IN FULL
@@ -66,64 +65,127 @@ The Solar Home series is a complete off-grid power package designed for homes th
    Q  How long can the Home battery run alone, and what warranty applies to it?
       units considered 9  chosen 2 (read whole)  2 REAL LLM calls (navigate + answer)  via llm navigation
       context ~611 tokens (full paragraphs, nothing trimmed)
-      reply  The Home battery’s runtime depends on the load you place on it. For a 10 kWh pack, the manual says that **“at a steady draw of one thousand watts, a fully‑charged ten kilowatt‑hour battery delivers ab…
+      reply  The Home battery's usable energy is about 80 % of its name-plate rating - a five-kilowatt-hour pack gives roughly 4 kWh usable and a ten-kilowatt-hour pack about 8 kWh usable【4. Battery capacity and e…
 
    Q  What does the Solar Home Plus kit cost and what is its warranty?
       units considered 9  chosen 2 (read whole)  2 REAL LLM calls (navigate + answer)  via llm navigation
       context ~189 tokens (full paragraphs, nothing trimmed)
-      reply  The Solar Home Plus (model SHM‑800) is listed at a **street price of $3,499** and its **warranty is 24 months**.  
-
-- “Solar Home Plus | SHM‑800 | 800 W | 10 kWh | $3,499 | 24 months”【Manual excerpt, …
+      reply  The Solar Home Plus (model SHM-800) is priced at **$3,499** and carries a **24-month warranty** for the complete kit (panels + inverter)【Solar Home Plus | SHM-800 | … | $3,499 | 24 months】. (Note that…
 
    Q  Which kit carries model number SHM-400?
       units considered 9  chosen 2 (read whole)  2 REAL LLM calls (navigate + answer)  via llm navigation
       context ~405 tokens (full paragraphs, nothing trimmed)
-      reply  The **Solar Home Mini** kit carries the model number **SHM‑400**【2. Kit lineup, specifications, and pricing】.
+      reply  The kit that carries model number **SHM-400** is the **Solar Home Mini**. 【The entry model is the Solar Home Mini, which carries the model number SHM-400, a fourhundred watt panel array…】
 
    Q  What should a coastal-area user prepare at install, and which maintenance habit matters most?
       units considered 9  chosen 2 (read whole)  2 REAL LLM calls (navigate + answer)  via llm navigation
       context ~706 tokens (full paragraphs, nothing trimmed)
-      reply  **What a coastal‑area user must have ready at install**  
-- If the house is within about 5 km of the sea, the installer has to apply the **corrosion‑protection kit** – a marine‑grade coating on every …
+      reply  **What a coastal-area user must have ready at install**
+
+- “**If the house is located within about five kilometers of the coast, the installer must additionally apply the corrosion protection kit, whi…
+
+   Q  What is the entry-level kit called, and how large is its battery?
+      units considered 9  chosen 2 (read whole)  2 REAL LLM calls (navigate + answer)  via llm navigation
+      context ~405 tokens (full paragraphs, nothing trimmed)
+      reply  The entry-level kit is called the **Solar Home Mini**, and it is equipped with a **five kilowatt-hour (5 kWh) battery**【2. Kit lineup, specifications, and pricing】.
+
+   Q  Which kit lets a larger home run a washing machine or a water pump in the evening?
+      units considered 9  chosen 2 (read whole)  2 REAL LLM calls (navigate + answer)  via llm navigation
+      context ~658 tokens (full paragraphs, nothing trimmed)
+      reply  The **Solar Home Max** kit (model SHM-1200) is the one designed for larger houses where the user can run a washing machine, a water pump, or a small air conditioner during the evening load【2†L1-L3】.
+
+   Q  Where must the battery pack be installed, and how far from walls?
+      units considered 9  chosen 2 (read whole)  2 REAL LLM calls (navigate + answer)  via llm navigation
+      context ~734 tokens (full paragraphs, nothing trimmed)
+      reply  The manual states that **the battery pack must be installed indoors, in a dry and ventilated space** and it must be placed **at least fifty centimeters away from walls** (and away from direct sunlight…
+
+   Q  How should roof panels be aimed and tilted?
+      units considered 9  chosen 2 (read whole)  2 REAL LLM calls (navigate + answer)  via llm navigation
+      context ~676 tokens (full paragraphs, nothing trimmed)
+      reply  The manual states that the roof panels must be oriented toward the true cardinal direction for your hemisphere – **true south if you are in the northern hemisphere or true north if you are in the sout…
+
+   Q  At what charge levels does the inverter stop charging and start feeding the home directly?
+      units considered 9  chosen 2 (read whole)  2 REAL LLM calls (navigate + answer)  via llm navigation
+      context ~624 tokens (full paragraphs, nothing trimmed)
+      reply  The inverter's charging profile is designed to stop charging **when the battery reaches 100 percent state-of-charge**, and it begins to **supply the home directly once the battery has crossed the 80 p…
+
+   Q  How long is the battery pack rated, and what cycle count backs that rating?
+      units considered 9  chosen 2 (read whole)  2 REAL LLM calls (navigate + answer)  via llm navigation
+      context ~573 tokens (full paragraphs, nothing trimmed)
+      reply  The battery pack is **rated for ten years of service**, and that rating is supported by a **maximum of six thousand full-discharge cycles** (whichever limit is reached first). 【“the manufacturer rates…
+
+   Q  What does the coastal corrosion protection kit consist of?
+      units considered 9  chosen 2 (read whole)  2 REAL LLM calls (navigate + answer)  via llm navigation
+      context ~706 tokens (full paragraphs, nothing trimmed)
+      reply  The coastal corrosion-protection kit is made up of **two parts**:
+
+- **A marine-grade coating** that is applied to every exposed metal fitting, and  
+- **A sealed junction box** that protects the outd…
+
+   Q  What must an owner upload to claim an in-warranty inverter fault, and how fast is service?
+      units considered 9  chosen 2 (read whole)  2 REAL LLM calls (navigate + answer)  via llm navigation
+      context ~583 tokens (full paragraphs, nothing trimmed)
+      reply  To make an in-warranty inverter claim you must **open a claim in the mobile application and upload the diagnostic summary that the app generates**. The support team then **ships a replacement or sched…
+
+   Q  At a light draw of five hundred watts, how long does a fully charged ten kWh pack last?
+      units considered 9  chosen 2 (read whole)  2 REAL LLM calls (navigate + answer)  via llm navigation
+      context ~658 tokens (full paragraphs, nothing trimmed)
+      reply  A fully charged ten-kilowatt-hour battery will run for roughly **sixteen hours** when the load is a modest 500 W draw【4. Battery capacity and expected runtime】.
+
+   Q  What, besides dust, can cut panel production, and by how much?
+      units considered 9  chosen 2 (read whole)  2 REAL LLM calls (navigate + answer)  via llm navigation
+      context ~706 tokens (full paragraphs, nothing trimmed)
+      reply  The manual says that **bird droppings**, in addition to dust, can reduce a panel's output – **by about ten percent or more**【5. Maintenance habits and warranty coverage】.
+
+      8/8 agentic          scored on NAVIGATED paragraphs (via llm navigation)
+          facts found (of 28) = 27/28  -> the navigator found the facts
 
  5 · FACT-COVERAGE GRID (the baseline for judgement)
-      every question carries 2 hand-defined required facts; a method gets ✅ only if
-      BOTH facts survive retrieval into its top-2 context. No telling the LLM anything.
-      method        | Q1 | Q2 | Q3 | Q4 | facts(8) | avg P@2 | avg R@2 | avg HR@2
-      ---------------------------------------------------------------------------
-      fixed_char      | ⚠ ✅ ✅ ⚠ |  6/8   |  0.50     | 0.52   | 1.00
-      fixed_token     | ⚠ ✅ ✅ ✅ |  7/8   |  0.50     | 0.54   | 1.00
-      sentence        | ❌ ✅ ✅ ⚠ |  5/8   |  0.38     | 0.46   | 0.75
-      paragraph       | ⚠ ✅ ✅ ✅ |  7/8   |  0.88     | 0.92   | 1.00
-      structural      | ✅ ✅ ✅ ✅ |  8/8   |  0.62     | 0.88   | 1.00
-      recursive       | ⚠ ❌ ✅ ⚠ |  4/8   |  0.50     | 0.38   | 0.75
-      semantic        | ⚠ ✅ ✅ ⚠ |  6/8   |  0.50     | 0.67   | 1.00
-      agentic         | ⚠ ✅ ✅ ✅ |  7/8   |  0.88     | 0.92   | 1.00
+      14 questions × 2 required facts = 28 facts; a method gets ✅ only if BOTH facts survive retrieval into its top-2 context.
+      No telling the LLM anything. ctx = tokens in top-2 (chars/4) — the token-budget ruler,
+      so you can see that k=2 is NOT an equal-token bet across methods.
+      method          | Q1 | Q2 | Q3 | Q4 | Q5 | Q6 | Q7 | Q8 | Q9 | Q10 | Q11 | Q12 | Q13 | Q14 | facts(28) | avg P@2 | avg R@2 | avg HR@2 | ctx tk
+      ------------------------------------------------------------------------------------------------------------------------------------------------------
+      fixed_char       ⚠ ✅ ✅ ⚠ ⚠ ✅ ✅ ⚠ ✅ ✅ ✅ ✅ ⚠ ✅ | 23/28  |   0.57     | 0.71   | 1.00 |  242
+      fixed_token      ⚠ ✅ ✅ ✅ ⚠ ✅ ✅ ✅ ✅ ✅ ✅ ✅ ✅ ❌ | 24/28  |   0.54     | 0.65   | 0.93 |  357
+      sentence         ❌ ✅ ✅ ⚠ ❌ ✅ ✅ ✅ ✅ ✅ ✅ ✅ ✅ ✅ | 23/28  |   0.46     | 0.77   | 0.86 |  180
+      paragraph        ⚠ ✅ ✅ ✅ ⚠ ✅ ✅ ✅ ✅ ✅ ✅ ✅ ✅ ✅ | 26/28  |   0.61     | 0.91   | 1.00 |  555
+      structural       ✅ ✅ ✅ ✅ ✅ ✅ ✅ ✅ ✅ ✅ ✅ ✅ ✅ ✅ | 28/28  |   0.54     | 0.93   | 1.00 |  906
+      recursive        ⚠ ❌ ✅ ⚠ ⚠ ✅ ✅ ✅ ✅ ✅ ✅ ✅ ❌ ✅ | 21/28  |   0.46     | 0.67   | 0.86 |  252
+      semantic         ⚠ ✅ ✅ ⚠ ✅ ✅ ✅ ✅ ✅ ✅ ✅ ✅ ✅ ✅ | 26/28  |   0.54     | 0.90   | 1.00 |  285
+      agentic          ⚠ ✅ ✅ ✅ ✅ ✅ ✅ ✅ ✅ ✅ ✅ ✅ ✅ ✅ | 27/28  |   0.64     | 0.95   | 1.00 |  571
 
  6 · CHUNKED vs CHUNKLESS — THE COST GAP (per question)
-      EVERY figure below is a REAL LLM call: both sides actually answer on Groq.
-      chunked shown for fixed_char : 1 call/question, only the small top-2 chunks as context.
+      EVERY figure below is a REAL LLM call: each side actually answers on Groq.
+      chunked shown for the weak baseline (fixed_char) AND the recommended method
+      (structural) — see the token-budget gap between them, and their shared 1 call.
       agentic (no chunks)          : 2 calls/question (real navigation + answer), whole sections read.
+      output tokens are the model's answer (incl. reasoning) — agentic pays them 2× by using 2 calls.
 
-   method              | calls | tokens in | tokens out | est. USD (4 questions)
-   ----------------------------------------------------------------------
-   chunked (fixed_char) |     4 |     1184 |      1182 |              0.00163
-   agentic (chunkless)  |     8 |     8524 |      2354 |              0.00689
+   method              | calls | tokens in | tokens out | est. USD (14 questions)
+   ------------------------------------------------------------------------
+   fixed_char          |    14 |     4170 |      4038 |            0.00565
+   structural          |    14 |    11547 |      3473 |            0.00956
+   agentic (chunkless) |    28 |    29757 |      8193 |            0.02403
 
-   per 4-question run, per question:
-      chunked: 1 call, ~296 in-tokens → $0.000408
-      agentic: 2 calls, ~2131 in-tokens → $0.001722
+   per 14-question run, per question:
+      fixed_char  1 call(s), ~297 in-tokens → $0.000404
+      structural  1 call(s), ~824 in-tokens → $0.000683
+      agentic     2 call(s), ~2125 in-tokens → $0.001716
+      (agentic's ctx in the grid counts only the units it read in full; its bill above
+      adds the full-manual navigation scan — that scan is what makes it 2 calls.)
 
-      agentic bills ~7.2× the context tokens, 2× the calls,
-      and ~4.2× the price per question — even before whole sections get big.
-      On a small manual the gap is modest, but chunked context is PREDICTABLE
-      (top-k × chunk size) while agentic context grows with whole-section size —
-      flip it to a 5,000-word regulation and the gap multiplies. Structure is the
-      cheap way to keep completeness and small fixed reads: structural got 4/4
-      questions complete in one call each.
+      agentic sends ~7.1× the context of fixed_char and ~2.6× of structural,
+      with 2× the calls — and ~2.5× the price of structural,
+      the method that actually wins on completeness. Structural's top-2 is bigger than
+      fixed_char's (whole sections vs tiny slices), yet it stays far below agentic and
+      needs ONE call: equal-k is an honest ruler only because the token column shows the
+      real budget each method spends. On a 5,000-word regulation the agentic context
+      (whole sections + a full-document navigation scan) multiplies while structural's
+      stays section-sized — that is why real systems chunk.
 
  7 · HONEST LIMITS OF THIS DEMO
-  - one document, four questions, one embedding model: a micro-benchmark, not a law.
+  - one document, fourteen questions, one embedding model: a micro-benchmark, not a law.
   - a real production decision needs your own documents + question set + reranking.
   - $ figures use example pricing; check the Groq console (openai/gpt-oss-120b) before quoting.
   - no hyDE, no BM25 hybrid, no meta-refinement — deliberately out of scope today.

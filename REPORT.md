@@ -27,16 +27,16 @@ so the choice stops being habit and starts being a decision.
 
 Preview of the verdict (full grid in [THE JUDGEMENT GRID](#the-judgement-grid-how-they-really-scored)):
 
-| Strategy | Required facts found (of 8) | One-line verdict |
+| Strategy | Required facts found (of 28) | One-line verdict |
 |---|---|---|
-| structural (heading-aware) | **8/8** | cheapest completeness — the winner here |
-| paragraph | 7/8 | great precision, but chunks can get fat |
-| agentic / chunkless | 7/8 | never severs a fact — pays in calls |
-| fixed_token | 7/8 | tiny context, same boundary disease |
-| fixed_char | 6/8 | the raw baseline; cuts sentences on purpose |
-| semantic | 6/8 | follows meaning, not questions |
-| sentence | 5/8 | grammar-safe, but facts scatter anyway |
-| recursive | 4/8 | the "default" is not a magic bullet |
+| structural (heading-aware) | **28/28** | perfect completeness at 1 call/question — the cheapest perfection here |
+| agentic / chunkless | **27/28** | navigator found every pair but Q1 (its two facts live in separate paragraphs) — pays ~2.5× the price, 2× the calls |
+| paragraph | 26/28 | great recall, but chunks can get fat |
+| semantic | 26/28 | follows meaning, not questions |
+| fixed_token | 24/28 | tiny context, same boundary disease |
+| fixed_char | 23/28 | the raw baseline; cuts sentences on purpose |
+| sentence | 23/28 | grammar-safe, but facts scatter anyway |
+| recursive | 21/28 | the "default" is not a magic bullet |
 
 ---
 
@@ -109,21 +109,41 @@ chunk's size, the number of ✂ mid-sentence cuts, and whether it sliced the tab
 Judging must be **independent of the LLM** (so the comparison is reproducible) and
 **concrete** (so it is checkable). The ruler has three parts:
 
-**① Required facts.** Four questions, each with 2 hand-defined facts. A method scores
-✅ only if **both** facts survive retrieval into its top-2 context.
+**① Required facts.** Fourteen questions, each with 2 hand-defined facts (= 28 facts).
+A method scores ✅ only if **both** facts survive retrieval into its top-2 context.
+All facts are verbatim substrings of the manual; a few questions pair facts that
+live in *different* paragraphs (Q1, Q2, Q4) so a method must retrieve two units to
+pass, while the rest are same-paragraph checks.
 
-| # | Question | Fact A | Fact B |
-|---|---|---|---|
-| Q1 | How long can the Home battery run alone, and what warranty applies to it? | `eight hours` | `ten years` |
-| Q2 | What does the Solar Home Plus kit cost and what is its warranty? | `3,499` | `24 months` |
-| Q3 | Which kit carries model number SHM-400? | `shm-400` | `solar home mini` |
-| Q4 | What should a coastal installer prepare, and which maintenance habit matters most? | `corrosion protection kit` | `heat sinks` |
+| # | Question | Fact A + Fact B |
+|---|---|---|
+| Q1 | How long can the Home battery run alone, and what warranty applies to it? | `eight hours` + `ten years` |
+| Q2 | What does the Solar Home Plus kit cost and what is its warranty? | `3,499` + `24 months` |
+| Q3 | Which kit carries model number SHM-400? | `shm-400` + `solar home mini` |
+| Q4 | What should a coastal-area user prepare at install, and which maintenance habit matters most? | `corrosion protection kit` + `heat sinks` |
+| Q5 | What is the entry-level kit called, and how large is its battery? | `solar home mini` + `5 kwh` |
+| Q6 | Which kit lets a larger home run a washing machine or water pump in the evening? | `washing machine` + `water pump` |
+| Q7 | Where must the battery pack be installed, and how far from walls? | `indoors` + `fifty centimeters` |
+| Q8 | How should roof panels be aimed and tilted? | `southern hemisphere` + `ten degrees` |
+| Q9 | At what charge levels does the inverter stop charging and start feeding the home? | `one hundred percent` + `eighty percent` |
+| Q10 | How long is the battery rated, and what cycle count backs it? | `ten years` + `six thousand` |
+| Q11 | What does the coastal corrosion protection kit consist of? | `marine-grade coating` + `sealed junction box` |
+| Q12 | What must an owner upload to claim an in-warranty inverter fault, and how fast is service? | `diagnostic summary` + `seven days` |
+| Q13 | At a light draw of five hundred watts, how long does a full ten kWh pack last? | `sixteen hours` + `five hundred watt` |
+| Q14 | What, besides dust, can cut panel production, and by how much? | `bird droppings` + `ten percent` |
 
 **② Retrieval quality.** For each method, every chunk is embedded with
 `all-MiniLM-L6-v2`, indexed in Qdrant (in-memory), and the question is retrieved with
 `k=2`. We compute precision@2 and recall@2 against "chunks that contain a required fact",
 plus **hit-rate@2** — *"did at least one relevant unit land in our top-2?"* — the metric
 most quoted for agentic navigation, where "found or not" matters more than exact rank.
+The **ctx** column reports the approximate tokens in each method's top-2
+(`chars/4`), making the single most important caveat visible: **k=2 is not an
+equal-token bet.** `structural` spends ~906 tokens/query on top-2; `fixed_char`
+spends ~242. The grid lets you weigh completeness *against* the context it cost.
+The chunkless row is judged on the units its navigator actually picked (not on a
+fresh embedding search over the same paragraphs), so the grid scores the agent,
+not a duplicated paragraph row.
 
 **③ Boundary quality.** Two weaknesses are counted mechanically:
 
@@ -151,8 +171,8 @@ from our run → verdict.**
   slivers of facts. Long, idea-sized paragraphs get chopped into unrelated fragments.
 - **Live evidence:** `25 chunks` · ✂ **23 mid-sentence cuts** · ✂ **1 table-row cut**.
   First sever in the manual: `…an hour. The philosophy behind ✂ uick-start card that
-  guides you th…` **Found 6/8 required facts**, P@2 0.50, R@2 0.52.
-- **Verdict:** the honest baseline — it *proves* that chunks sever meaning. Nobody
+  guides you th…` **Found 23/28 required facts**, P@2 0.57, R@2 0.71.
+- **Verdict:** the honest baseline — it *shows* that chunks sever meaning. Nobody
   should ship this for prose, but you should always run it to measure the others.
 
 ### `fixed_token` — every N tokens
@@ -163,7 +183,7 @@ from our run → verdict.**
   bill." Slightly less violent than chars because it respects word boundaries.
 - **Breaks:** identical disease — it still cuts *between* sentences mid-idea.
 - **Live evidence:** `17 chunks` · ✂ **14 mid-sentence cuts** · table intact.
-  **Found 7/8** · P@2 0.50 · R@2 0.54.
+  **Found 24/28** · P@2 0.54 · R@2 0.65.
 - **Verdict:** the same baseline, tuned to a model's real currency. Fine for exact
   token budgets, still blind to meaning.
 
@@ -176,7 +196,7 @@ from our run → verdict.**
   a fact from §5 — two different paragraphs. Sentence units are still separate
   retrieval targets, so both facts can still miss the top-2.
 - **Live evidence:** `28 chunks` · **0 mid-sentence cuts** · table intact.
-  **Found 5/8** · P@2 0.38 · R@2 0.46.
+  **Found 23/28** · P@2 0.46 · R@2 0.77.
 - **Verdict:** fixes the symptom (cut sentences) but not the problem (scattered
   facts). It is a *necessary* refinement, not a strategy on its own for idea-keeping.
 
@@ -184,13 +204,13 @@ from our run → verdict.**
 
 - **What:** one chunk per blank-line-separated block. Each unit is (usually) one
   self-contained thought.
-- **Wins:** best raw precision in our run (P@2 0.88) — when the answer lives inside one
+- **Wins:** strong recall in our run (R@2 0.91) — when the answer lives inside one
   paragraph, you find the *exact* paragraph.
 - **Breaks:** paragraphs can be huge (up to 1,610 chars here) → context bloat and
   diluted top-k; and a cross-paragraph question (Q1, Q4) still splits the required
   facts across two chunks.
-- **Live evidence:** `9 chunks` · **0 cuts** · table intact.
-  **Found 7/8** · P@2 0.88 · R@2 0.92.
+- **Live evidence:** `9 navigation units` (whole paragraphs — nothing severed) · **0 cuts** · table intact.
+  **Found 26/28** · P@2 0.61 · R@2 0.91.
 - **Verdict:** strong, simple default for well-written documents. Its weakness is size,
   not meaning.
 
@@ -200,13 +220,16 @@ from our run → verdict.**
   markdown-aware cousin of "section-based" chunking.
 - **Wins:** sections are *semantic containers*: a heading says what the whole block is
   about, so the retriever gets a tagged unit; tables stay whole; completeness stays
-  high at 1 small call per question.
+  perfect at 1 call per question.
 - **Breaks:** relies on the document having structure. A wall of prose with no headings
-  degrades it to paragraph-level.
+  degrades it to paragraph-level. And its *completeness is bought with context*:
+  top-2 here runs ~906 tokens/question — roughly a third of the manual — versus ~242
+  for `fixed_char` (see the **ctx** column).
 - **Live evidence:** `6 chunks` · **0 cuts** · table intact.
-  **Found 8/8 — ALL required facts.** P@2 0.62 · R@2 **0.88**. All 4 questions ✅.
-- **Verdict:** **the cheap completeness winner** — structural information is free
-  insurance. Use it whenever your corpus is markdown/HTML/sectioned.
+  **Found 28/28 — ALL required facts.** P@2 0.54 · R@2 **0.93**. All 14 questions ✅.
+- **Verdict:** **the cheap perfection winner** — among the two methods that found
+  everything, `structural` gets there at ~40% of the agentic path's price and stays
+  section-sized. Use it whenever your corpus is markdown/HTML/sectioned.
 
 ### `recursive` — the famous "default"
 
@@ -217,7 +240,7 @@ from our run → verdict.**
 - **Breaks:** overlap re-attaches each chunk's tail, which can repeat noise and blur
   boundaries, and "well enough" still misses idea-boundaries.
 - **Live evidence:** `25 chunks` with overlap tails · ✂ **4 cuts** · table intact.
-  **Found only 4/8** · P@2 0.50 · R@2 0.38.
+  **Found only 21/28** · P@2 0.46 · R@2 0.67.
 - **Verdict:** the demo's most useful surprise: **a default is not a proof.** On this
   document it was the *worst* at completeness. Always measure it, don't trust it.
 
@@ -231,7 +254,7 @@ from our run → verdict.**
 - **Breaks:** a topic is not a *question*; and it costs a model pass at index time.
   Topic boundaries and question-shaped boundaries just aren't the same thing.
 - **Live evidence:** `24 chunks` · **0 cuts** · table intact.
-  **Found 6/8** · P@2 0.50 · R@2 0.67.
+  **Found 26/28** · P@2 0.54 · R@2 0.90.
 - **Verdict:** intellectually appealing, honestly an add-on: fine for topical search,
   not a substitute for structure when the question is fact-shaped.
 
@@ -244,19 +267,26 @@ from our run → verdict.**
   elegant answer to the whole chunking debate: "don't."
 - **Breaks:** completeness now depends on *navigation*, not boundaries — and it pays
   for it: **2 REAL LLM calls per question** (a navigation call that picks the units +
-  an answer call), and the whole section as context. The navigation call also has to
-  *scan the full document listing* to choose, which is visible in the token bill. If
+  an answer call), and the whole read sections as context. The navigation call also has
+  to *scan the full document listing* to choose, which is visible in the token bill. If
   the agent picks the wrong units it misses facts, exactly like retrieval.
 - **Live evidence:** `9 whole-paragraph units` · 0 cuts by construction, and the agent
-  really navigates: in this transcript the LLM picked the paragraphs (`via llm
-  navigation`) — for Q2 it went straight to the spec table. **Found 7/8** · P@2 0.88 ·
-  R@2 0.92 · **HR@2 1.00.** The replies cite the source verbatim (e.g. Q3: *"The kit
-  that carries model number SHM-400 is the Solar Home Mini."*).
+  really navigates: in this transcript the LLM picked the paragraphs on every question
+  (`via llm navigation`) — for Q2 it went straight to the spec table. Scored on the
+  paragraphs it *actually navigated to*, not on an embedding search: **Found 27/28 —
+  every fact pair but Q1** (its two facts live in separate paragraphs and the navigator's
+  pair of units caught only one). P@2 0.64 · R@2 0.95 · **HR@2 1.00**, context ~571
+  tokens/question.
+  The replies cite the source verbatim (e.g. Q14: *"a layer of dust or bird droppings
+  can reduce output… the loss can be ten percent or more"*).
 - **Verdict:** the idea that motivated the demo — and our measured takeaway is nuanced:
-  agentic never severs facts, but structure achieves the *same* completeness at a
-  fraction of the cost (the agent bills ~4.2× the chunked baseline per question — see
-  [COST CONVERSATION](#cost-conversation-what-it-actually-costs)). See
-  [THE ONE-LINE TAKEAWAYS](#the-one-line-takeaways-cheat-sheet).
+  the LLM navigator is excellent on this manual (27/28, one paragraph-border miss), so
+  the differentiator is NOT facts, it is **cost and predictability**: ~2× the calls and
+  ~2.5× the price of `structural`, which matches or beats it in fewer, smaller reads —
+  see [COST CONVERSATION](#the-cost-conversation-chunked-vs-chunkless). (Offline, with no key,
+  the navigator degrades to embedding ranking, so its row then mirrors `paragraph`'s —
+  honestly: offline there IS no agent to score.)
+  See [THE ONE-LINE TAKEAWAYS](#the-one-line-takeaways-cheat-sheet).
 
 ---
 
@@ -330,78 +360,88 @@ cuts while `fixed_char` shows 23 on the real document.
 
 ## THE JUDGEMENT GRID (how they really scored)
 
-Reproduced from the live run — a clean markdown table:
+Reproduced from the live run — a clean markdown table (the demo prints the full
+Q1–Q14 grid; `ctx` = approximate tokens in each method's top-2 context):
 
-| Method | Q1 | Q2 | Q3 | Q4 | Facts (8) | Avg P@2 | Avg R@2 | Avg HR@2 |
-|---|---|---|---|---|---|---:|---:|---:|
-| fixed_char | ⚠ | ✅ | ✅ | ⚠ | 6/8 | 0.50 | 0.52 | 1.00 |
-| fixed_token | ⚠ | ✅ | ✅ | ✅ | 7/8 | 0.50 | 0.54 | 1.00 |
-| sentence | ❌ | ✅ | ✅ | ⚠ | 5/8 | 0.38 | 0.46 | 0.75 |
-| paragraph | ⚠ | ✅ | ✅ | ✅ | 7/8 | 0.88 | 0.92 | 1.00 |
-| structural | ✅ | ✅ | ✅ | ✅ | **8/8** | 0.62 | 0.88 | 1.00 |
-| recursive | ⚠ | ❌ | ✅ | ⚠ | 4/8 | 0.50 | 0.38 | 0.75 |
-| semantic | ⚠ | ✅ | ✅ | ⚠ | 6/8 | 0.50 | 0.67 | 1.00 |
-| agentic | ⚠ | ✅ | ✅ | ✅ | 7/8 | 0.88 | 0.92 | 1.00 |
+| Method | Facts (28) | Avg P@2 | Avg R@2 | Avg HR@2 | ctx |
+|---|---:|---:|---:|---:|---:|
+| fixed_char | 23/28 | 0.57 | 0.71 | 1.00 | 242 |
+| fixed_token | 24/28 | 0.54 | 0.65 | 0.93 | 357 |
+| sentence | 23/28 | 0.46 | 0.77 | 0.86 | 180 |
+| paragraph | 26/28 | 0.61 | 0.91 | 1.00 | 555 |
+| structural | **28/28** | 0.54 | 0.93 | 1.00 | 906 |
+| recursive | 21/28 | 0.46 | 0.67 | 0.86 | 252 |
+| semantic | 26/28 | 0.54 | 0.90 | 1.00 | 285 |
+| agentic | **27/28** | 0.64 | 0.95 | 1.00 | 571 |
 
 **How to read it**
 
-- **Q1–Q4** columns are the fact test: ✅ both facts retrieved, ⚠ one, ❌ none.
-- **Facts (8)** is total completeness (8 = perfect).
-- **Avg P@2** = of the 2 chunks retrieved, how many were relevant.
-- **Avg R@2** = of all *relevant* chunks that exist, how many were retrieved.
-- **Avg HR@2** = did the top-2 contain *any* relevant unit (1 = yes, 0 = no), averaged.
+- **Facts (28)** is total completeness (28 = perfect; each question needs both of its 2 facts).
+- **Avg P@2** = of the 2 units retrieved/navigated, how many were relevant.
+- **Avg R@2** = of all *relevant* units that exist, how many were retrieved/navigated.
+- **Avg HR@2** = did the top-2/navigated set contain *any* relevant unit (1 = yes), averaged.
+- **ctx** = the token budget the ruler really spends — where the "equal k, unequal
+  cost" caveat lives. Structural reaches perfection with ~3.7× `fixed_char`'s context.
 
 **Four observations that survive any single run**
 
-1. **Structure is the cheapest completeness.** `structural` is 8/8 at one call per
-   question. Prefer it on any structured corpus.
-2. **Every fixed/grammar-aware method leaks facts at paragraph borders.** Q1 (two
-   facts, two paragraphs) is exactly where char/token/sentence/recursive fall to ⚠ or ❌.
-   Boundaries that ignore paragraphs are boundaries that eat answers.
-3. **Agentic is not automatically better.** Its 7/8 equals `paragraph`'s — reading
-   whole paragraphs helps, but *finding* the right paragraphs is still retrieval. (In
-   the retrieval baseline it missed Q1's `eight hours` on navigation alone; Q1 is the
-   one question whose two facts live in two places.)
-4. **Hit-rate can flatter a retriever.** `agentic` scores HR@2 1.00 yet still 7/8 — it
-   always found *a* relevant section, but Q1's two facts lived in separate places and
-   top-2 caught only one. "We found something" ≠ "we found the answer": that is exactly
-   why this demo judges facts, not just hits.
+1. **Structure is the cheapest perfection.** `structural` finds 28/28 at one call per
+   question — the only cost is context size (ctx 906), which the grid prints honestly.
+2. **Every method that ignores paragraph boundaries leaks facts there.** Q1 (two
+   facts, two paragraphs) is exactly where char/token/sentence/recursive fall to ⚠ or ❌ —
+   and it is the *only* question the agentic navigator missed (its two picked paragraphs
+   held one fact). Boundaries that ignore paragraphs are boundaries that eat answers.
+3. **Scoring the navigator changes the agentic story.** Judged on the paragraphs it
+   actually picked, the LLM navigator is 27/28 — better than every fixed method and
+   mortally close to `structural`, and its single miss is the same paragraph-border
+   question, not navigation randomness. So the differentiator here is **cost and
+   predictability**, not facts (2× calls, ~2.5× price — see the cost conversation).
+   Offline, the navigator becomes embedding ranking and its row legitimately mirrors
+   `paragraph`'s.
+4. **Hit-rate can flatter a retriever.** `paragraph`/`fixed_char`/`semantic` all reach
+   HR@2 1.00 yet land at 26/28, 23/28, 26/28 — they *always* find *a* relevant unit but
+   not always *both* facts. "We found something" ≠ "we found the answer": that is
+   exactly why this demo judges facts, not just hits.
 
 ---
 
 ## THE COST CONVERSATION — CHUNKED vs CHUNKLESS
 
-The framing is "chunked = 1 call with a small context, agentic = many calls with a big
-context." Our live numbers make it concrete (`$` uses the example pricing in `costs.py`
-— verify live Groq rates before quoting dollars). The chunked side is **one** method,
-`fixed_char`, at 1 fair-basis call per question — not two methods counted together, which
-would have disguised the real gap:
+The framing is "chunked = 1 call per question, agentic = 2 calls and a full-document
+scan." Our live numbers make it concrete (`$` uses the example pricing in `costs.py`
+— verify live Groq rates before quoting dollars). We cost the **weak baseline**
+(`fixed_char`) *and* the **recommended method** (`structural`), so the cheap path is
+the one you'd actually ship, not a strawman:
 
-| Path | LLM calls (4 Q's) | Tokens in (4 Q's) | Tokens out (4 Q's) | Est. USD (4 questions) | Est. USD / question |
-|---|---|---:|---:|---:|---:|---:|
-| chunked (`fixed_char`) | 4 | 1,184 | 1,182 | 0.00163 | 0.000408 |
-| agentic / chunkless | 8 | 8,524 | 2,354 | 0.00689 | 0.001722 |
+| Path | LLM calls (14 Q's) | Tokens in (14 Q's) | Tokens out (14 Q's) | Est. USD (14 Q's) | USD / question |
+|---|---:|---:|---:|---:|---:|
+| chunked (`fixed_char`) | 14 | 4,170 | 4,038 | 0.00565 | 0.000404 |
+| chunked (`structural`) | 14 | 11,547 | 3,473 | 0.00956 | 0.000683 |
+| agentic / chunkless | 28 | 29,757 | 8,193 | 0.02403 | 0.001716 |
 
 What is honest here — and what isn't:
 
-- **Every number above is a REAL LLM call.** Both sides actually answered on Groq
+- **Every number above is a REAL LLM call.** All three paths actually answered on Groq
   (`openai/gpt-oss-120b`) in this run; input *and* output tokens come from the model's
-  usage object, not a model. The chunked side is one method, `fixed_char`, at 1 fair-basis
-  call per question — not two methods counted together, which would have disguised the gap.
-- The **call gap is real and structural: 2 calls vs 1 per question** (navigate + answer).
-- The **token gap is real and it is big even on this tiny manual — agentic sends ≈ 7.2×
-  the input tokens** (8,524 vs 1,184): it reads whole paragraphs in full, and its
-  navigation call scans the whole numbered document to choose units.
-- **The dollar gap lands at ≈ 4.2× per question** (0.001722 vs 0.000408) — squarely in
-  the "3–5×" range you'd expect from an agentic pipeline, measured, not estimated.
-- The **predictability gap is the one that scales**: chunked context is *roughly
-  predictable* (top-k × chunk size, fixed per method), while agentic context *grows with
-  whole-section size*. Point it at a 5,000-word regulation and the 4.2× on this manual
-  becomes 5–10×: the calls stay 2 vs 1, but the context will not stay small.
+  usage object, not a model.
+- **The call gap is structural: 2 vs 1 per question** (navigate + answer). Because there
+  are two calls, agentic also pays answer output tokens *twice over* — part of its 8,193
+  vs ~3.7k in output.
+- **The input-token gap is real and big even on this tiny manual — agentic sends ≈ 7.1×
+  `fixed_char`'s context and ≈ 2.6× `structural`'s** (29,757 vs 4,170 / 11,547): it reads
+  whole paragraphs, and its navigation call scans the whole numbered document.
+- **The dollar gap lands at ≈ 2.5× per question vs `structural`** (0.001716 vs 0.000683)
+  — and `structural` reaches 28/28 completeness while staying at one call.
+  Against `fixed_char` the ratio is ≈ 4.2×, but that comparison is the apples-to-oranges
+  one: `fixed_char` is the weak baseline, not the recommendation.
+- **The predictability gap is the one that scales**: a chunked top-2 is *roughly
+  predictable* (top-k × chunk size), while agentic context *grows with whole-section size
+  plus the scan*. Point it at a 5,000-word regulation and the 2.5× on this manual becomes
+  more: the calls stay 2 vs 1, but the context will not stay small.
 
-So the honest one-liner: *"Chunkless never severs a fact, but it bills like a taxi (per
-read) instead of sharing a bus (fixed chunks). Structure gets you the completeness at the
-bus price — that's why real systems chunk."*
+So the honest one-liner: *"Chunkless never severs a fact, and its navigator reads the
+manual well — but it bills like a taxi (per read) instead of sharing a bus (fixed
+chunks). Structure gets you 28/28 at the bus price — that's why real systems chunk."*
 
 ---
 
@@ -424,12 +464,12 @@ Rules of thumb (from this deck's evidence):
 
 | Goal | Reach for |
 |---|---|
-| Completeness at lowest cost (recommended default) | `structural` |
+| Completeness at lowest cost (recommended default) | `structural` — 28/28, 1 call/question |
 | Fine-grained pinpointing, neat prose | `paragraph` |
 | Fuzzy topical search, no headings anywhere | `semantic` |
 | "I must use the library default" | `recursive` — **but run the facts test** |
 | The demo/audit of whether boundaries hurt at all | `fixed_char`, `fixed_token` |
-| Avoid boundaries entirely, budget allows 2× calls | `agentic` / chunkless |
+| Avoid boundaries entirely; budget allows ~2.5× price, 2× calls | `agentic` / chunkless — scored on its real navigation |
 
 Parameters worth tuning in `chunkers.py`: `size` (500 chars / 120 tokens here), `overlap`
 (100), recursive separators, semantic similarity threshold (0.45).
@@ -444,18 +484,31 @@ Parameters worth tuning in `chunkers.py`: `size` (500 chars / 120 tokens here), 
 | fixed_token | "Bills in the LLM's currency; still blind to ideas." |
 | sentence | "Grammar-safe, answer-blind." |
 | paragraph | "The idea-unit default; fat paragraphs eventually bite." |
-| structural | "Headings are free metadata — cheapest completeness." |
+| structural | "Headings are free metadata — cheapest 28/28 (watch the ctx column)." |
 | recursive | "The famous default is not a proof; overlap can add noise." |
 | semantic | "Follows topics, not questions; costs a model pass." |
-| agentic | "Never severs a fact — navigation and tokens are the tax." |
+| agentic | "Never severs a fact, navigator is sharp — the 2-call bill is the tax." |
 
 ---
 
 ## HONEST LIMITS AND WHAT'S GENUINELY NEXT
 
-- This is **one** document, **four** questions, **one** embedding model: a *micro-benchmark*,
-  not a law of nature. The verdict pattern (structure wins, fixed-size leaks, agentic is
-  pricey) is general — the exact numbers are not.
+- This is **one** document, **fourteen** questions, **one** embedding model: a *micro-benchmark*,
+  not a law of nature. The verdict pattern (structure wins, fixed-size leaks, agentic
+  finds facts but bills for it) is general — the exact numbers are not.
+- **k=2 is not an equal-token bet.** Methods were compared at equal retrieval depth, not
+  equal context size; the **ctx** column shows what each top-2 really cost, so weigh
+  completeness against context honestly (e.g. structural 906 vs fixed_char 242)
+  before generalizing from this manual.
+- **The grid is deterministic; the agentic row is stochastic.** Chunking and top-2
+  retrieval are pure logic + fixed embeddings, so every chunked method reproduces its
+  exact facts/cuts/P/R/HR on a rerun (in this *fixed environment* — a dependency or
+  hardware change could flip a borderline tie). The dollar figures are not fully fixed
+  even for chunked methods: input tokens are exact, but output tokens come from a
+  stochastic answer and drift slightly (fixed_char out 3,810 → 4,038 across two runs).
+  The LLM navigator varies in *both* facts and tokens: it was 28/28 on one live run and
+  27/28 on another (each only missing Q1, whose two facts live in separate paragraphs).
+  Treat the agentic row as a snapshot, not a guarantee.
 - Per instruction, the demo is intentionally limited to the **chunking problem**.
   Deliberately out of scope: reranking, hybrid BM25+semantic, hyDE, query expansion,
   meta-refinement, agent tooling, multi-hop reasoning.
@@ -464,8 +517,8 @@ Parameters worth tuning in `chunkers.py`: `size` (500 chars / 120 tokens here), 
   context needs a separate, position-controlled benchmark. Out of scope with the demo.
 - `$` figures use example `/1M`-token pricing; always verify the live Groq console rates
   before quoting dollars.
-- Reproducibility: `pytest` = 15 pure-logic tests, `verify_project.py` = 6/6 hygiene
-  checks, and the transcript is regenerable with `python3 demo.py`.
+- Reproducibility: `pytest` = 17 pure-logic tests, `verify_project.py` = 6/6 hygiene
+  checks, and the transcript is regenerable with `python3 demo.py > evidence/demo_output.txt`.
 
 ---
 
@@ -480,10 +533,12 @@ python3 -m pytest -q; python3 verify_project.py  # 3  <- proof
 
 Live LLM answers appear automatically when `.env` holds `GROQ_API_KEY` + a valid
 `GROQ_MODEL` (see `.env.example`); the agent makes **two real calls per question**
-(navigation + answer) and every token in the cost table is measured from the model's
-usage object. The committed transcript IS that live run. Without a key, the
-deterministic dry-run backend reproduces the same chunk counts, cuts, fact grid and
-P/R/HR scores with mock replies — only the token-dollar columns and the agent's
-navigation choice differ (the offline agent falls back to embedding ranking). On
+(navigation + answer), the grid's agentic row scores the paragraphs it **navigated
+to**, and every token in the cost table is measured from the model's usage object.
+The committed transcript (`python3 demo.py > evidence/demo_output.txt`) is from a
+live run. Without a key, the deterministic dry-run backend reproduces the same chunk
+counts, cuts, and the chunked methods' fact grid and P/R/HR scores with mock replies —
+but the dry-run has no agent to score, so the agentic row then mirrors the embedding
+ranking of `paragraph`, and the token-dollar columns reflect mock sizes. On
 Windows, prefer a UTF-8 terminal (VS Code / Windows Terminal) so glyphs like ✂ ✅ render;
 the file `evidence/demo_output.txt` is saved as UTF-8 for GitHub.

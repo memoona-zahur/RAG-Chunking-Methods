@@ -81,6 +81,7 @@ def navigate(document_text: str, query: str, k_units: int = 2) -> tuple[list[str
         "calls": 2,
         "units_considered": len(units),
         "chosen": k_units,
+        "chosen_indices": list(chosen_idx),
         "via": via,
         "nav_tokens_in": (nav_res["input_tokens"] if nav_res else 0),
         "nav_tokens_out": (nav_res["output_tokens"] if nav_res else 0),

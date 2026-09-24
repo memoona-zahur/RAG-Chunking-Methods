@@ -151,6 +151,42 @@ def test_cost_accounting_is_deterministic():
     assert acc["usd"] == costs.cost_usd(600, 100)
 
 
+def test_analyze_agentic_scores_only_the_navigated_units():
+    units = [
+        Chunk("the battery lasts eight hours at one thousand watts", "agentic", 0),
+        Chunk("the pack is rated for ten years or six thousand cycles", "agentic", 1),
+        Chunk("the Plus kit costs $3,499 with a 24 month warranty", "agentic", 2),
+    ]
+    # navigator picks units 0 and 1 for a battery question -> both facts found
+    rows = evaluate.analyze_agentic(
+        units,
+        [[0, 1]],
+        questions=[("How long does the battery run, and its warranty?", ["eight hours", "ten years"])],
+    )
+    assert rows[0]["facts"] == (2, 2)
+    assert rows[0]["calls"] == 2
+    # navigator picks unit 2 instead (plus-kit paragraph) -> only ONE fact present
+    rows2 = evaluate.analyze_agentic(
+        units,
+        [[1, 2]],
+        questions=[("How long does the battery run, and its warranty?", ["eight hours", "ten years"])],
+    )
+    assert rows2[0]["facts"] == (1, 2)
+    assert rows2[0]["precision"] == 0.5  # one of the two chosen units held a required fact
+
+
+def test_analyze_agentic_does_embedding_search_over_the_same_units():
+    # Sanity: the function scores what navigation returns; a fresh embed/search
+    # (analyze_method) over the identical unit set is the ORIGINAL review bug,
+    # so ensure the two paths can disagree on the route, not the code.
+    units = [Chunk("A sentence about a.", "agentic", i) for i in range(4)]
+    rows = evaluate.analyze_agentic(
+        units, [[0, 3]], questions=[("Q?", ["zzz", "yyy"])]
+    )
+    assert rows[0]["facts"] == (0, 2)
+    assert rows[0]["hit_rate"] == 0.0
+
+
 def test_all_methods_return_nonempty_on_doc(tmp_path):
     doc = tmp_path / "d.md"
     doc.write_text(TEXT, encoding="utf-8")

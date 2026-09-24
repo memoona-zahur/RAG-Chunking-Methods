@@ -8,6 +8,11 @@ For every chunking method we embed + index its chunks, retrieve top-k, then scor
 - hit-rate@k (the agentic-side metric): did at least one relevant unit land in top-k?
 - mid-sentence cuts & table cuts produced by the method itself
 - tokens sent per question (chars/4 heuristic) and LLM calls
+
+The chunkless/agentic path is scored separately (analyze_agentic): it is judged
+on the paragraphs the agent ACTUALLY navigated to, not on a fresh embedding
+search over the same units - otherwise it would score identically to paragraph
+chunking and the grid would tell you nothing about the navigator.
 """
 
 from __future__ import annotations
@@ -49,7 +54,11 @@ def hit_rate(retrieved: list[dict], relevant: set[int], k: int) -> float:
     return 1.0 if set(top) & relevant else 0.0
 
 
-# (question, [required facts as lowercase substrings])
+# (question, [required facts as lowercase substrings]).
+# 14 questions × 2 facts = 28 required facts. Each fact exists verbatim in
+# demo_document.md. Some questions pair facts inside ONE paragraph (Q5-Q14);
+# others deliberately split facts across two paragraphs (Q1, Q2, Q4) so a method
+# must retrieve both units to pass. Every pair was checked against the document.
 QUESTIONS: list[tuple[str, list[str]]] = [
     (
         "How long can the Home battery run alone, and what warranty applies to it?",
@@ -67,7 +76,49 @@ QUESTIONS: list[tuple[str, list[str]]] = [
         "What should a coastal-area user prepare at install, and which maintenance habit matters most?",
         ["corrosion protection kit", "heat sinks"],
     ),
+    (
+        "What is the entry-level kit called, and how large is its battery?",
+        ["solar home mini", "5 kwh"],
+    ),
+    (
+        "Which kit lets a larger home run a washing machine or a water pump in the evening?",
+        ["washing machine", "water pump"],
+    ),
+    (
+        "Where must the battery pack be installed, and how far from walls?",
+        ["indoors", "fifty centimeters"],
+    ),
+    (
+        "How should roof panels be aimed and tilted?",
+        ["southern hemisphere", "ten degrees"],
+    ),
+    (
+        "At what charge levels does the inverter stop charging and start feeding the home directly?",
+        ["one hundred percent", "eighty percent"],
+    ),
+    (
+        "How long is the battery pack rated, and what cycle count backs that rating?",
+        ["ten years", "six thousand"],
+    ),
+    (
+        "What does the coastal corrosion protection kit consist of?",
+        ["marine-grade coating", "sealed junction box"],
+    ),
+    (
+        "What must an owner upload to claim an in-warranty inverter fault, and how fast is service?",
+        ["diagnostic summary", "seven days"],
+    ),
+    (
+        "At a light draw of five hundred watts, how long does a fully charged ten kWh pack last?",
+        ["sixteen hours", "five hundred watt"],
+    ),
+    (
+        "What, besides dust, can cut panel production, and by how much?",
+        ["bird droppings", "ten percent"],
+    ),
 ]
+
+N_FACTS = len(QUESTIONS) * 2  # total required facts any method must find
 
 K = 2  # retrieval depth used across every method for a fair baseline
 
@@ -98,6 +149,47 @@ def analyze_method(
                 "hit_rate": hr,
                 "tokens": est_tokens(context),
                 "calls": 1,
+            }
+        )
+    return rows
+
+
+def analyze_agentic(
+    units,
+    chosen_idx_by_question: list[list[int]],
+    questions: list[tuple[str, list[str]]] | None = None,
+    k: int = K,
+) -> list[dict]:
+    """Score the chunkless path on the units the agent ACTUALLY navigated to.
+
+    Unlike analyze_method, here the "retrieved" set is the LLM-navigated (or,
+    offline, embedding-ranked) paragraphs the agent chose to read in full - not
+    a fresh embedding search over the same units. That is what the reviewer
+    could not see before: the agentic row now reflects the navigator's picks.
+
+    ``units`` is chunkers.chunk_agentic(document_text); ``chosen_idx_by_question``
+    holds the unit indices picked per question (agentic.py 'chosen_indices').
+    """
+    if questions is None:
+        questions = QUESTIONS
+    rows: list[dict] = []
+    for (q, facts), chosen_idx in zip(questions, chosen_idx_by_question):
+        chosen = [units[i].text for i in chosen_idx]
+        cov, total = fact_coverage(chosen, facts)
+        relevant = relevant_chunk_ids(units, facts)
+        retrieved = [{"idx": i} for i in chosen_idx]
+        p, r = precision_recall(retrieved, relevant, k)
+        hr = hit_rate(retrieved, relevant, k)
+        rows.append(
+            {
+                "method": "agentic",
+                "question": q,
+                "facts": (cov, total),
+                "precision": p,
+                "recall": r,
+                "hit_rate": hr,
+                "tokens": est_tokens(chosen),
+                "calls": 2,
             }
         )
     return rows

@@ -1,23 +1,29 @@
 # RAG Chunking — a Head-to-Head of 8 Strategies on One Long Document
 
 A self-contained, runnable comparison of chunking methods for Retrieval-Augmented
-Generation, built around **one long, paragraph-based document** and **four
-fact-checkable questions**. It includes the usual suspects (fixed-size char,
-fixed-size token, sentence, paragraph, structural, recursive, semantic) and the
-**chunkless / agentic** far end, so the "to chunk or not to chunk" decision is
-shown with real numbers.
+Generation, built around **one long, paragraph-based document** and **fourteen
+fact-checkable questions** (28 required facts). It includes the usual suspects
+(fixed-size char, fixed-size token, sentence, paragraph, structural, recursive,
+semantic) and the **chunkless / agentic** far end, so the "to chunk or not to
+chunk" decision is shown with real numbers.
 
 Everything is computed live — there are no hand-written results anywhere.
 
-## What this demo proves
+## What this demo illustrates
 
-| Takeaway | Proven by |
+> A 14-question, 1-document, 1-embedding-model *micro-benchmark* — it shows the
+> *pattern* (structure wins, fixed-size leaks, agentic finds facts but bills for
+> it); the exact numbers will shift on your own corpus. Caveats in
+> [Honest limits](#honest-limits--read-before-you-generalize).
+
+| Takeaway | Illustrated by |
 |---|---|
 | Fixed-size splitting severs sentences and table rows | `fixed_char` cuts 23 sentences + 1 table row in this document |
-| Structure-aware chunking recovers completeness at one small call | `structural` finds 8/8 required facts, all 4 questions complete |
-| Blind recursive overlap is not a magic bullet | `recursive` finds only 4/8 required facts here |
-| Chunkless/agentic never severs a fact — but it bills like a taxi (2 real calls/question, ≈4.2× the price) | agentic section + cost drill-down: real navigation call + real answer call, every token from the model's usage object |
-| Chunked context is predictable (top-k × chunk size); agentic context grows with section size | cost drill-down at the end of the run: one chunked method vs the chunkless path, per question |
+| Structure-aware chunking recovers completeness at one call per question | `structural` finds 28/28 required facts, all 14 questions complete |
+| Structural's completeness isn't free — its top-2 context is big | the grid's **ctx** column: ~906 tokens/question vs ~242 for `fixed_char` — k=2 is not an equal-token bet |
+| Blind recursive overlap is not a magic bullet | `recursive` finds only 21/28 required facts |
+| Chunkless/agentic never severs a fact, and its LLM navigator reads the manual well — but bills like a taxi | the agentic row is scored on the paragraphs it **actually navigated to** (27/28, its only miss is Q1 — two facts in separate paragraphs), yet pays ~2.5× structural's price and 2× its calls |
+| Chunked context is predictable; agentic context is what the navigator picks + a full-document scan | cost drill-down at the end of the run: real tokens straight from the model's usage object |
 
 ## Run it
 
@@ -48,12 +54,13 @@ GROQ_MODEL=openai/gpt-oss-120b
 ```
 
 With a key, the agentic side makes **two real LLM calls per question** (a navigation
-call that picks the paragraphs + the answer call), and the cost table's tokens come
-straight from the model's usage object. Without a key, the demo still runs
-end-to-end with a deterministic dry-run backend that reports the required facts
-present in the retrieved context, so the mechanics — chunk counts, cuts, and every
-P/R/HR score — are the same; only the token-dollar columns and the agent's
-navigation choice differ (the offline agent falls back to embedding ranking).
+call that picks the paragraphs + the answer call), the cost table's tokens come
+straight from the model's usage object, and the grid's **agentic row is scored on
+the paragraphs the agent navigated to** (not on a separate embedding search).
+Without a key, the demo still runs end-to-end with a deterministic dry-run backend
+that reports the required facts present in the retrieved context, so the mechanics
+— chunk counts, cuts, and every P/R/HR score — are the same; only the token-dollar
+columns differ, and the offline navigator falls back to embedding ranking.
 
 ## What's inside
 
@@ -74,15 +81,18 @@ verify_project.py   sanity + hygiene check before you commit/share
 
 ## The evaluation baseline (how we judge)
 
-Each of the 4 questions carries **2 hand-defined required facts**. A method only
-gets ✅ if **both** facts survive retrieval into its top-2 context — the LLM is
-told nothing. Fine-grained scores: fact coverage, precision@2, recall@2,
-hit-rate@2 (did the top-2 contain *any* relevant unit — the agentic-side metric),
-plus mid-sentence cuts and table-row cuts produced by the method itself.
+Each of the **14 questions** carries **2 hand-defined required facts** (= 28 facts).
+A method only gets ✅ if **both** facts survive retrieval into its top-2 context —
+the LLM is told nothing. Fine-grained scores: fact coverage, precision@2,
+recall@2, hit-rate@2 (did the top-2 contain *any* relevant unit), plus
+mid-sentence cuts, table-row cuts, and the **ctx** column — the approximate token
+budget each method's top-2 spends, so you can see the ruler is *not* "equal
+tokens". The chunkless/agentic row is judged on the paragraphs its navigator
+activated, not on a fresh embedding search.
 
 ## Honest limits — read before you generalize
 
-- One manual, four questions, one embedding model: a micro-benchmark, not a law.
+- One manual, fourteen questions, one embedding model: a micro-benchmark, not a law.
 - A production decision needs your own document, question set, and retrieval tuning (reranking, hybrid BM25).
 - `$` figures use example pricing — verify current rates for `openai/gpt-oss-120b` in the Groq console.
 - Deliberately out of scope: hyDE, hybrid BM25, meta-refinement, agent frameworks.

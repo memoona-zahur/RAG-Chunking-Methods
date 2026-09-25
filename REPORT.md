@@ -42,7 +42,7 @@ Preview of the verdict (full grid in [THE JUDGEMENT GRID](#the-judgement-grid-ho
 
 ## CHUNKING STRATEGIES AT A GLANCE
 
-The eight strategies in this demo, in beginner-friendly English. The details,
+The eight strategies in this demo. The details,
 method-by-method, come later in the deck.
 
 | Method | How it splits | Main characteristic |

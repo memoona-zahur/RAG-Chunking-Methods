@@ -342,10 +342,15 @@ which ones to read in full (agentic). Its real measured fact-survival and token 
 against the 7 chunked methods are in the [judgement grid](#the-judgement-grid-how-they-really-scored)
 and the [cost conversation](#the-cost-conversation-chunked-vs-chunkless).
 
-**When to use which:** **Chunked** → FAQs, knowledge bases, chatbots — high volume,
-well-sectioned content, fast and cheap. **Chunkless/Agentic** → contracts, financial
-or technical reports, research papers — cross-section answers, tables, complete
-context, when you can afford higher latency and cost.
+**When to use which:**
+- **Chunked** → FAQs, knowledge bases, chatbots — high volume, well-sectioned
+  content, fast and cheap.
+- **Chunkless** → contracts, financial/technical reports, research papers — long,
+  organized documents, cross-section answers, tables, complete context.
+- **Agentic** → multi-hop / multi-intent questions, cross-document answers, dynamic
+  tool use (multiple databases, live APIs) — a reasoning loop with retries.
+
+*A real system often combines chunkless + agentic — this demo's 8th method is both.*
 
 ---
 

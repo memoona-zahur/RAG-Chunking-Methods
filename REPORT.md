@@ -313,6 +313,37 @@ from our run → verdict.**
 
 ---
 
+## CHUNKLESS vs AGENTIC — TWO DIFFERENT IDEAS, NOT SYNONYMS
+
+These two terms get mixed up all the time, but they answer different questions.
+
+**Chunkless RAG — about HOW the document is stored & read.** No fixed-size chunks.
+The document keeps its natural structure: whole paragraphs, sections and tables stay
+intact as *navigation units*, and the system moves through them like a human reading a
+manual section-by-section — a sentence or a table row is never cut in half. The
+downside: it reads bigger pieces, so each context costs more tokens.
+
+**Agentic RAG — about WHO decides what to read.** Instead of a fixed *"embed the
+question → return the top-2 similar chunks"* step, an LLM *agent* runs a loop:
+plan (what do I need?) → search (which section / tool / source?) → read → judge
+(is this enough?) → retry with a better plan if not. It can even split a complex
+question into sub-questions and use multiple tools. The downside: more calls per
+question → higher latency and more tokens.
+
+**Why the confusion?** Both reject the naive *"cut into fixed-size pieces and hope the
+top-k happens to contain the answer"*, so they *feel* similar. But they are independent
+axes: *chunkless* is about how text is segmented, *agentic* is about who controls
+retrieval. A system can be chunked+agentic or chunkless+static — they are not two ends
+of one line.
+
+**How this demo implements both at once.** Its 8th method is chunkless **and** agentic:
+whole paragraphs are the navigation units (chunkless), and an LLM navigator decides
+which ones to read in full (agentic). Its real measured fact-survival and token cost
+against the 7 chunked methods are in the [judgement grid](#the-judgement-grid-how-they-really-scored)
+and the [cost conversation](#the-cost-conversation-chunked-vs-chunkless).
+
+---
+
 ## WORKED EXAMPLES — 2 INPUTS, 8 FATES
 
 The strategy detail above explains **what** each method does; this section shows the
